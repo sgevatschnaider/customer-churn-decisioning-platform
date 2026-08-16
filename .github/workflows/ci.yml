@@ -63,7 +63,7 @@ jobs:
       - name: Import the real DAG with Airflow installed
         run: |
           docker run --rm churn-platform-airflow:ci python -c \
-            "from airflow.models import DagBag; bag=DagBag('/opt/airflow/dags', include_examples=False); assert not bag.import_errors, bag.import_errors; dag=bag.get_dag('customer_churn_decisioning_pipeline'); assert dag is not None; assert len(dag.task_ids) == 11"
+            "from airflow.models import DagBag; bag=DagBag('/opt/airflow/dags', include_examples=False); assert not bag.import_errors, bag.import_errors; dag=bag.dags['customer_churn_decisioning_pipeline']; assert len(dag.task_ids) == 11"
       - name: Verify degraded API container
         run: |
           docker run --detach --name churn-api-degraded --publish 8001:8000 churn-platform-api:ci
