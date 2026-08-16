@@ -1,0 +1,56 @@
+{
+  "source": "uci",
+  "validation": {
+    "rows": 406829,
+    "customers": 4372,
+    "minimum_date": "2010-12-01T08:26:00",
+    "maximum_date": "2011-12-09T12:50:00",
+    "missing_customer_rate": 0.249266943342886,
+    "duplicate_event_rate": 0.024931850974242248,
+    "cancellation_rate": 0.021888803403887137,
+    "negative_price_rate": 3.690656549346846e-06
+  },
+  "selected_model": "hist_gradient_boosting",
+  "test_metrics": {
+    "roc_auc": 0.7147699686705744,
+    "average_precision": 0.7026044964954636,
+    "precision": 0.7637969094922737,
+    "recall": 0.21598002496878901,
+    "f1": 0.3367396593673966,
+    "brier_score": 0.21279184176271917,
+    "recall_at_budget": 0.21598002496878901,
+    "precision_at_budget": 0.7637969094922737,
+    "lift_at_budget": 1.4422507186105666,
+    "budget_fraction": 0.15,
+    "customers": 3025,
+    "contacted": 453,
+    "observed_churners": 1602,
+    "confusion_matrix": [
+      [
+        1316,
+        107
+      ],
+      [
+        1256,
+        346
+      ]
+    ]
+  },
+  "value_policy": {
+    "policy": "expected_value",
+    "customers": 3025,
+    "contact_capacity": 453,
+    "customers_contacted": 453,
+    "contact_rate": 0.1497520661157025,
+    "expected_net_value": 21156.58407711279,
+    "estimated_value_at_risk": 93686.33630845117,
+    "observed_churners_contacted": 192.0,
+    "observed_churners": 1602,
+    "recall_at_budget": 0.1198501872659176,
+    "precision_at_budget": 0.423841059602649,
+    "lift_at_budget": 0.8003240981885226,
+    "scenario_realized_net_value": 14588.611874999999,
+    "benchmark_repetitions": 1
+  },
+  "monitoring_status": "alert"
+}

@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a reproducible defect in data, modeling, decisioning, API, or operations.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Include command, source mode, configuration changes, and minimal logs.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Python, operating system, commit SHA, and Docker version when relevant.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed customer data, credentials, tokens, and secrets from this report.
+          required: true
+

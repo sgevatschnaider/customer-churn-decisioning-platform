@@ -1,0 +1,159 @@
+{
+  "test": {
+    "roc_auc": 0.7147699686705744,
+    "average_precision": 0.7026044964954636,
+    "precision": 0.7637969094922737,
+    "recall": 0.21598002496878901,
+    "f1": 0.3367396593673966,
+    "brier_score": 0.21279184176271917,
+    "recall_at_budget": 0.21598002496878901,
+    "precision_at_budget": 0.7637969094922737,
+    "lift_at_budget": 1.4422507186105666,
+    "budget_fraction": 0.15,
+    "customers": 3025,
+    "contacted": 453,
+    "observed_churners": 1602,
+    "confusion_matrix": [
+      [
+        1316,
+        107
+      ],
+      [
+        1256,
+        346
+      ]
+    ]
+  },
+  "validation": [
+    {
+      "model": "recency_trend_heuristic",
+      "roc_auc": 0.6092060939148598,
+      "average_precision": 0.6848200463687649,
+      "precision": 0.7542168674698795,
+      "recall": 0.1939281288723668,
+      "f1": 0.30852636766880237,
+      "brier_score": 0.26573024680474455,
+      "recall_at_budget": 0.1939281288723668,
+      "precision_at_budget": 0.7542168674698795,
+      "lift_at_budget": 1.2953464415281946,
+      "budget_fraction": 0.15,
+      "customers": 2772,
+      "contacted": 415,
+      "observed_churners": 1614,
+      "confusion_matrix": [
+        [
+          1056,
+          102
+        ],
+        [
+          1301,
+          313
+        ]
+      ]
+    },
+    {
+      "model": "logistic_regression_c_0.1",
+      "roc_auc": 0.7177300092241248,
+      "average_precision": 0.7440036884761048,
+      "precision": 0.7927710843373494,
+      "recall": 0.20384138785625774,
+      "f1": 0.3242976835879744,
+      "brier_score": 0.2070435189602235,
+      "recall_at_budget": 0.20384138785625774,
+      "precision_at_budget": 0.7927710843373494,
+      "lift_at_budget": 1.361562234066377,
+      "budget_fraction": 0.15,
+      "customers": 2772,
+      "contacted": 415,
+      "observed_churners": 1614,
+      "confusion_matrix": [
+        [
+          1072,
+          86
+        ],
+        [
+          1285,
+          329
+        ]
+      ]
+    },
+    {
+      "model": "logistic_regression_c_1",
+      "roc_auc": 0.7180264225162813,
+      "average_precision": 0.7438448828120041,
+      "precision": 0.7927710843373494,
+      "recall": 0.20384138785625774,
+      "f1": 0.3242976835879744,
+      "brier_score": 0.20668555048114226,
+      "recall_at_budget": 0.20384138785625774,
+      "precision_at_budget": 0.7927710843373494,
+      "lift_at_budget": 1.361562234066377,
+      "budget_fraction": 0.15,
+      "customers": 2772,
+      "contacted": 415,
+      "observed_churners": 1614,
+      "confusion_matrix": [
+        [
+          1072,
+          86
+        ],
+        [
+          1285,
+          329
+        ]
+      ]
+    },
+    {
+      "model": "logistic_regression_c_10",
+      "roc_auc": 0.7180162567174528,
+      "average_precision": 0.7435242807755446,
+      "precision": 0.7903614457831325,
+      "recall": 0.20322180916976457,
+      "f1": 0.3233119763430261,
+      "brier_score": 0.2066470725618926,
+      "recall_at_budget": 0.20322180916976457,
+      "precision_at_budget": 0.7903614457831325,
+      "lift_at_budget": 1.3574237470327406,
+      "budget_fraction": 0.15,
+      "customers": 2772,
+      "contacted": 415,
+      "observed_churners": 1614,
+      "confusion_matrix": [
+        [
+          1071,
+          87
+        ],
+        [
+          1286,
+          328
+        ]
+      ]
+    },
+    {
+      "model": "hist_gradient_boosting",
+      "roc_auc": 0.7242601973663091,
+      "average_precision": 0.7496258037581909,
+      "precision": 0.7927710843373494,
+      "recall": 0.20384138785625774,
+      "f1": 0.3242976835879744,
+      "brier_score": 0.20737438652781617,
+      "recall_at_budget": 0.20384138785625774,
+      "precision_at_budget": 0.7927710843373494,
+      "lift_at_budget": 1.361562234066377,
+      "budget_fraction": 0.15,
+      "customers": 2772,
+      "contacted": 415,
+      "observed_churners": 1614,
+      "confusion_matrix": [
+        [
+          1072,
+          86
+        ],
+        [
+          1285,
+          329
+        ]
+      ]
+    }
+  ]
+}

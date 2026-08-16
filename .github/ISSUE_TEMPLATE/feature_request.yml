@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose an evidence-based improvement to the platform.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or decision gap
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Acceptance and validation
+      description: Describe tests, temporal evaluation, monitoring, or business evidence required.
+    validations:
+      required: true
+

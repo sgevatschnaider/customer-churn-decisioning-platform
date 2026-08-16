@@ -1,0 +1,10 @@
+{
+  "rows": 406829,
+  "customers": 4372,
+  "minimum_date": "2010-12-01T08:26:00",
+  "maximum_date": "2011-12-09T12:50:00",
+  "missing_customer_rate": 0.249266943342886,
+  "duplicate_event_rate": 0.024931850974242248,
+  "cancellation_rate": 0.021888803403887137,
+  "negative_price_rate": 3.690656549346846e-06
+}
