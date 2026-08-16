@@ -12,7 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "Sergio Gevatschnaider" }]
 dependencies = [
   "fastapi==0.115.6",
-  "joblib==1.4.2",
+  "joblib==1.5.3",
   "matplotlib==3.9.2",
   "mlflow==2.19.0",
   "numpy==2.1.3",
