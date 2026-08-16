@@ -35,6 +35,14 @@ def render_model_card(
     feature_end = snapshots["cutoff_date"].max().date()
     metadata = bundle.run_metadata
     eligibility = (eligibility_report or {}).get("overall", {})
+    test_eligibility = next(
+        (
+            item
+            for item in (eligibility_report or {}).get("by_cutoff", [])
+            if item.get("split") == "test"
+        ),
+        {},
+    )
     lines = [
         "# Model Card",
         "",
@@ -54,6 +62,10 @@ def render_model_card(
         f"- Eligible active-repeat observations: "
         f"{eligibility.get('eligible_customers', len(snapshots))}",
         f"- Excluded observations: {eligibility.get('excluded_customers', 'not recorded')}",
+        f"- Final test customers before eligibility: "
+        f"{test_eligibility.get('total_customers_before_eligibility', 'not recorded')}",
+        f"- Final eligible test customers: "
+        f"{test_eligibility.get('eligible_customers', 'not recorded')}",
         f"- Feature cutoffs: {feature_start} to {feature_end}",
         "- Target: no positive purchase in the 45 days strictly after a snapshot cutoff.",
         "- Features: recency, frequency, monetary value, order value, tenure, invoice/product "
@@ -71,6 +83,8 @@ def render_model_card(
         "",
         f"- Model: {bundle.model_name}",
         f"- Version: `{bundle.model_version}`",
+        f"- Exact public source commit: `{metadata.get('source_commit', 'not recorded')}`",
+        f"- Execution timestamp: " f"{metadata.get('execution_timestamp_utc', 'not recorded')}",
         f"- Trained at: {bundle.trained_at_utc}",
         f"- MLflow tracking URI: `{bundle.tracking_uri}`",
         f"- Dataset SHA-256: `{metadata.get('dataset_sha256', 'not recorded')}`",
@@ -128,6 +142,20 @@ def render_business_report(
 ) -> None:
     """Render decision-policy results and economic caveats from actual run outputs."""
     value = comparison.set_index("policy").loc["expected_value"]
+    churn_policy = comparison.set_index("policy").loc["churn_probability"]
+    test_eligibility = next(
+        item for item in eligibility_report["by_cutoff"] if item["split"] == "test"
+    )
+    if value["lift_at_budget"] < 1:
+        lift_explanation = (
+            f"Its observed lift is {value['lift_at_budget']:.3f}, below 1; this result is reported "
+            "without suppression because the policy optimizes scenario value, not churn capture."
+        )
+    else:
+        lift_explanation = (
+            f"Its observed lift is {value['lift_at_budget']:.3f}, above random selection but lower "
+            f"than the churn-probability policy at {churn_policy['lift_at_budget']:.3f}."
+        )
     table_columns = [
         "policy",
         "customers_contacted",
@@ -178,10 +206,16 @@ def render_business_report(
         f"- Eligible active-repeat observations: "
         f"{eligibility_report['overall']['eligible_customers']:,}",
         f"- Excluded observations: {eligibility_report['overall']['excluded_customers']:,}",
+        f"- Final test customers before eligibility: "
+        f"{test_eligibility['total_customers_before_eligibility']:,}",
+        f"- Final eligible test customers: {test_eligibility['eligible_customers']:,}",
+        f"- Final test exclusions: {test_eligibility['excluded_customers']:,}",
         f"- Eligible-population churn prevalence: "
         f"{eligibility_report['overall']['eligible_churn_prevalence']:.1%}",
         f"- Exclusion criteria failures: "
         f"`{eligibility_report['overall']['criterion_failure_counts']}`",
+        f"- Primary exclusion reasons: "
+        f"`{eligibility_report['overall']['primary_exclusion_reasons']}`",
         "",
         "## Budget and recommended policy",
         "",
@@ -216,11 +250,12 @@ def render_business_report(
         "",
         "## Value-versus-lift decomposition",
         "",
-        "The value-aware policy may have lift below 1 because it deliberately prioritizes margin "
-        "at risk rather than churn probability alone. The table reports this result without "
-        "suppression: compare average churn probability, average margin, expected value per "
-        "contact, observed churn rate, lift, campaign cost, and total expected value. Higher "
-        "customer margin can outweigh fewer captured churners under the scenario formula.",
+        "The value-aware policy deliberately prioritizes margin at risk rather than churn "
+        "probability alone. "
+        + lift_explanation
+        + " Compare average churn probability, average margin, expected value per contact, "
+        "observed churn rate, recall, precision, lift, campaign cost, and total expected value. "
+        "Higher customer margin can outweigh fewer captured churners under the scenario formula.",
         "",
         "![Policy value decomposition](figures/policy_value_decomposition.png)",
         "",

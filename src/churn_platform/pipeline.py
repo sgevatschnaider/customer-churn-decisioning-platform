@@ -121,6 +121,14 @@ def build_feature_stage(source: str) -> pd.DataFrame:
                 reason: int(sum(item["criterion_failure_counts"][reason] for item in by_cutoff))
                 for reason in by_cutoff[0]["criterion_failure_counts"]
             },
+            "primary_exclusion_reasons": {
+                reason: int(
+                    sum(item["primary_exclusion_reasons"].get(reason, 0) for item in by_cutoff)
+                )
+                for reason in sorted(
+                    {reason for item in by_cutoff for reason in item["primary_exclusion_reasons"]}
+                )
+            },
         },
         "by_cutoff": by_cutoff,
     }

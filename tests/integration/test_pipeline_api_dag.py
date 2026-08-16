@@ -45,6 +45,8 @@ def test_complete_fixture_pipeline(pipeline_result, project_root) -> None:
     bundle = load_model_bundle()
     assert bundle.test_metrics["brier_score"] >= 0
     assert pipeline_result["eligibility"]["excluded_customers"] > 0
+    assert pipeline_result["eligibility"]["primary_exclusion_reasons"]
+    assert (project_root / "artifacts" / "eligibility_report.json").exists()
     assert bundle.run_metadata["dependency_lock_identifier"] != "missing-lockfile"
     assert bundle.tracking_uri.startswith("file:")
 
