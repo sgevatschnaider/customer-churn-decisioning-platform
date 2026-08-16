@@ -1,11 +1,28 @@
-# Operational Evidence Checklist
+# Operational Evidence
 
-The source, fixture pipeline, API behavior, DAG contract, and local MLflow file-store run are
-verified by automated tests. Docker was not available in the release-authoring environment, so this
-repository does not claim a verified container-network MLflow smoke test and does not contain
-fabricated interface screenshots.
+The Python 3.12 source checks, isolated fixture pipeline, API behavior, lightweight DAG contract, and
+local MLflow file-store run are verified by automated tests. Docker was not available in the v1.0.1
+authoring environment, so no local container result or interface screenshot is claimed here.
 
-When Docker is available, capture genuine evidence with the following procedure.
+The SHA-pinned GitHub Actions workflow is configured to build the API and Airflow images, import the
+real DAG with Airflow installed, start a model-less API in `degraded` state, build a fixture model in
+an ephemeral container, and then verify `ready`. A passing workflow run is the machine-verifiable
+container acceptance record; this document does not presume that result before CI completes.
+
+## Local verification status
+
+| Check | Status in authoring environment |
+|---|---|
+| Python 3.12 lock installation | Available |
+| Ruff lint and format | Executed |
+| Unit/integration tests and branch coverage | Executed |
+| Isolated synthetic fixture pipeline | Executed |
+| FastAPI ready/degraded behavior | Executed through `TestClient` |
+| Local MLflow file-store run | Executed by the fixture integration test |
+| Docker Compose parsing/build/runtime | Not executable locally: Docker command unavailable |
+| Airflow-installed DAG import | Delegated to the container CI job |
+
+When Docker is available, reproduce genuine operational evidence with the following procedure.
 
 ## MLflow server
 
@@ -50,4 +67,4 @@ Verify that liveness and readiness return HTTP 200, then open `http://localhost:
 - redact local paths, customer inputs, tokens, and credentials;
 - optimize images before adding them under `docs/images/`;
 - do not use images as substitutes for machine-verifiable CI evidence.
-
+- do not label a configured check as verified until its command exits successfully.
