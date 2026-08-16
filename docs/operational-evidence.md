@@ -6,8 +6,15 @@ authoring environment, so no local container result or interface screenshot is c
 
 The SHA-pinned GitHub Actions workflow is configured to build the API and Airflow images, import the
 real DAG with Airflow installed, start a model-less API in `degraded` state, build a fixture model in
-an ephemeral container, and then verify `ready`. A passing workflow run is the machine-verifiable
-container acceptance record; this document does not presume that result before CI completes.
+an ephemeral container, and then verify `ready`, `/predict`, and `/decision` through real HTTP
+requests. A passing workflow run is the machine-verifiable container acceptance record; this
+document does not presume that result before CI completes.
+
+Local environments and the API image use `requirements.lock`. The Airflow image deliberately uses
+the pinned `apache/airflow:2.10.5-python3.11` base plus the project's direct dependencies pinned in
+`pyproject.toml`, rather than installing the complete transitive lock over Airflow's constrained
+environment. CI validates that strategy by building the actual image and importing the DAG with
+Airflow's `DagBag`.
 
 ## Local verification status
 

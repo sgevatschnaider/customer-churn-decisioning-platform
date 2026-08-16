@@ -358,9 +358,13 @@ The verified suite contains **26 tests** and achieved **90.7% combined line/bran
 the 80% gate. It covers eligibility, leakage,
 horizon alignment, economic assumptions, every campaign constraint, MLflow runtime/public metadata
 separation, readiness/degraded states, portfolio API behavior, monitoring, tracked-file privacy, and
-DAG structure. GitHub Actions installs from the lock, runs lint/format checks, tests and the complete
-fixture pipeline, builds both container images, imports the real DAG with Airflow installed, and
-checks degraded and ready API containers. CI never downloads UCI or requires credentials.
+DAG structure. Local environments, the quality job, and the API image install from
+`requirements.lock`. The Airflow image instead starts from the pinned
+`apache/airflow:2.10.5-python3.11` base and installs the project's direct dependencies at the exact
+versions declared in `pyproject.toml`; it deliberately does not replace Airflow's constrained
+transitive environment with the complete lock. GitHub Actions builds both images, imports the real
+DAG with `DagBag`, and checks degraded and ready API containers through HTTP, including the current
+`/predict` and `/decision` response contracts. CI never downloads UCI or requires credentials.
 
 ## Monitoring
 
@@ -379,9 +383,12 @@ See [`reports/monitoring_report.md`](reports/monitoring_report.md). Schema/type 
 - Missing CustomerID rows cannot support customer-level snapshots.
 - Margin is estimated from historical spend; actual gross margin is unavailable.
 - Campaign consent, deliverability, capacity, and fairness outcomes are absent.
-- Incremental retention effect and offer acceptance probability are scenario assumptions, not causal estimates.
+- Incremental retention effect and offer acceptance probability are scenario assumptions, not causal estimates; validate them through a randomized retention experiment before operational use.
 - A 90-day economic view requires a separately trained 90-day model or survival analysis; the 45-day probability is not extrapolated.
 - Monitoring compares temporal cohorts but cannot diagnose every business regime change.
+- MLflow and Airflow provide reproducible local architecture, not managed enterprise infrastructure.
+- Complete source data and large model artifacts are deliberately not versioned.
+- Major Python, Airflow, MLflow, pandas, and PyArrow updates proposed by Dependabot require a controlled migration and lockfile regeneration.
 
 ## Responsible use
 

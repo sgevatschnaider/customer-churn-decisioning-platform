@@ -87,6 +87,61 @@ jobs:
           done
           test "$(curl --silent --output /tmp/ready.json --write-out '%{http_code}' http://localhost:8002/health/ready)" = "200"
           grep --quiet 'ready' /tmp/ready.json
+          python - <<'PY'
+          import json
+          from urllib.request import Request, urlopen
+
+          payload = {
+              "customer_id": "EXAMPLE-001",
+              "recency_days": 45,
+              "purchase_frequency": 1.2,
+              "monetary_value": 1200,
+              "average_order_value": 100,
+              "customer_tenure_days": 180,
+              "number_of_invoices": 12,
+              "number_of_unique_products": 20,
+              "purchase_regularity_days": 8,
+              "recent_purchasing_trend": -0.2,
+              "cancellation_rate": 0.05,
+              "quantity_purchased": 60,
+              "geographic_segment": "Europe",
+              "recent_spend": 200,
+              "historical_spend": 400,
+              "spend_change_ratio": 0.5,
+              "recent_invoice_count": 2,
+              "historical_invoice_count": 4,
+              "frequency_change_ratio": 0.6,
+          }
+
+          def post(path: str) -> dict[str, object]:
+              request = Request(
+                  f"http://localhost:8002{path}",
+                  data=json.dumps(payload).encode(),
+                  headers={"Content-Type": "application/json"},
+                  method="POST",
+              )
+              with urlopen(request, timeout=30) as response:
+                  assert response.status == 200, (path, response.status)
+                  return json.load(response)
+
+          prediction = post("/predict")
+          churn_probability = prediction.get("churn_probability")
+          assert isinstance(churn_probability, (int, float))
+          assert not isinstance(churn_probability, bool)
+          assert 0 <= churn_probability <= 1
+
+          decision = post("/decision")
+          required_fields = {
+              "expected_net_value",
+              "economic_eligibility",
+              "portfolio_selection_notice",
+          }
+          assert required_fields <= decision.keys(), required_fields - decision.keys()
+          assert isinstance(decision["expected_net_value"], (int, float))
+          assert isinstance(decision["economic_eligibility"], bool)
+          assert decision["portfolio_selection_notice"]
+          assert "recommended_action" not in decision
+          PY
           docker rm --force churn-api-ready
       - name: Show container logs on failure
         if: failure()
