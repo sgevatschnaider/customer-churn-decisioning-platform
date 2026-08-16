@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+
+# Raw/intermediate data (the deterministic fixture is intentionally versioned)
+data/raw/*
+!data/raw/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Generated model and local experiment stores
+artifacts/*.joblib
+artifacts/*.json
+artifacts/*.parquet
+!artifacts/data_validation.json
+!artifacts/metrics.json
+!artifacts/mlflow_run.json
+!artifacts/pipeline_summary.json
+mlruns/
+mlartifacts/
+airflow.db
+airflow-webserver.pid
+logs/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
