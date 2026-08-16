@@ -1,0 +1,11 @@
+random_seed: 42
+selection_metric: average_precision
+budget_fraction: 0.15
+calibration_method: sigmoid
+logistic_c_values: [0.1, 1.0, 10.0]
+hist_gradient_boosting:
+  learning_rate: 0.08
+  max_iter: 180
+  max_leaf_nodes: 15
+  l2_regularization: 1.0
+

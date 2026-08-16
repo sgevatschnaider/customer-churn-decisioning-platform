@@ -1,0 +1,29 @@
+source: uci_online_retail
+official_page: https://archive.ics.uci.edu/dataset/352/online+retail
+download_url: https://archive.ics.uci.edu/static/public/352/online%2Bretail.zip
+expected_sha256: f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b
+doi: 10.24432/C5BW33
+license: CC BY 4.0
+raw_zip_path: data/raw/online_retail.zip
+raw_xlsx_path: data/raw/Online Retail.xlsx
+normalized_path: data/interim/transactions.parquet
+fixture_path: data/fixtures/transactions.csv
+snapshots_path: data/processed/customer_snapshots.parquet
+history_days: 180
+horizon_days: 45
+cutoffs:
+  train:
+    - "2011-06-01"
+    - "2011-07-17"
+  validation:
+    - "2011-09-01"
+  test:
+    - "2011-10-17"
+fixture_cutoffs:
+  train:
+    - "2023-08-01"
+    - "2023-09-16"
+  validation:
+    - "2023-11-01"
+  test:
+    - "2023-12-17"

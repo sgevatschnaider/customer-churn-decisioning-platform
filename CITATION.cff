@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "Customer Churn Decisioning Platform"
+type: software
+authors:
+  - family-names: Gevatschnaider
+    given-names: Sergio
+version: 1.0.0
+date-released: 2026-08-15
+url: "https://github.com/sgevatschnaider/customer-churn-decisioning-platform"
+license: MIT
+
