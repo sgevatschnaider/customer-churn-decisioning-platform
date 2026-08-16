@@ -11,11 +11,23 @@
 
 This repository turns raw retail transactions into leakage-safe customer snapshots, calibrated churn probabilities, and budget-constrained retention decisions. It connects reproducible data ingestion, temporal modeling, scenario economics, MLflow, Airflow, FastAPI, drift monitoring, automated testing, and containerized local services.
 
-The published run uses the official **UCI Online Retail** dataset: 541,909 source rows from 2010-12-01 through 2011-12-09. Rows without a usable customer identifier are excluded from customer-level modeling. The final temporal test cohort contains 3,025 customers and 1,602 observed churners.
+The published run uses the official **UCI Online Retail** dataset: 541,909 source rows from
+2010-12-01 through 2011-12-09. Rows without a usable customer identifier are excluded from
+customer-level modeling. The corrected release restricts every model and campaign cohort to active
+repeat buyers using a threshold derived exclusively from training-period purchase cadence.
 
-> Under a configurable 15% customer-contact limit, the value-aware policy selected 453 customers and produced estimated net value of **GBP 21,156.58** under the documented assumptions. It captured **11.99%** of observed churners. The churn-probability policy captured **21.60%** with **1.442× lift**, but its estimated net value was GBP 4,143.79.
+The final temporal test population fell from 3,025 customer observations before eligibility to
+1,433 active repeat buyers, including 517 observed churners. The selected logistic regression
+produced ROC-AUC 0.7058, PR-AUC 0.5412, and lift 1.5413 at the 15% contact limit.
 
-These are actual outputs from the committed pipeline configuration, not illustrative metrics. Expected value is scenario analysis—not causal incremental profit—because the dataset contains no retention treatments or campaign outcomes.
+> Under the configurable 15% contact limit, the value-aware policy selected 214 customers, captured
+> 17.4% of observed churners, and produced **GBP 2,884.17 scenario expected net value**. Operational
+> capacity—not the GBP 12,000 financial budget—was the binding constraint.
+
+These are actual UCI outputs from public source commit
+[`4e6d02e`](https://github.com/sgevatschnaider/customer-churn-decisioning-platform/commit/4e6d02e7fecc7bcf93b7dae704dc6405ec02bdda),
+not fixture metrics. Expected value is scenario analysis—not causal incremental profit—because the
+dataset contains no retention treatments or campaign outcomes.
 
 ## Actual results
 
@@ -23,32 +35,60 @@ These are actual outputs from the committed pipeline configuration, not illustra
 
 | Metric | Result |
 |---|---:|
-| Selected model | HistGradientBoosting |
-| ROC-AUC | 0.7148 |
-| PR-AUC / average precision | 0.7026 |
-| Brier score | 0.2128 |
-| Precision at 15% budget | 0.7638 |
-| Recall at 15% budget | 0.2160 |
-| F1 at 15% budget | 0.3367 |
-| Lift at 15% budget | 1.4423 |
-| Customers contacted | 453 / 3,025 |
-| Confusion matrix `[[TN, FP], [FN, TP]]` | `[[1316, 107], [1256, 346]]` |
+| Eligible test customers | 1,433 / 3,025 before eligibility |
+| Observed churners | 517 |
+| Selected model | Logistic regression, `C=10` |
+| ROC-AUC | 0.7058 |
+| PR-AUC / average precision | 0.5412 |
+| Brier score | 0.2088 |
+| Precision at 15% | 0.5561 |
+| Recall at 15% | 0.2302 |
+| F1 at 15% | 0.3256 |
+| Lift at 15% | 1.5413 |
+| Confusion matrix `[[TN, FP], [FN, TP]]` | `[[821, 95], [398, 119]]` |
 
 ### Retention policy comparison
 
-| Policy | Churn recall | Precision | Lift | Estimated net value (GBP) | Scenario realized value (GBP) |
-|---|---:|---:|---:|---:|---:|
-| Random benchmark, mean of 200 draws | 0.1494 | 0.5282 | 0.9975 | 5,310.80 | 3,857.93 |
-| Highest churn probability | **0.2160** | **0.7638** | **1.4423** | 4,143.79 | 4,063.72 |
-| Highest positive expected value | 0.1199 | 0.4238 | 0.8003 | **21,156.58** | **14,588.61** |
+| Policy | Avg churn p | Avg margin at risk | Recall | Precision | Lift | EV/contact | Total expected value | Campaign cost |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Random, 200-draw mean | 0.442 | GBP 175.09 | 0.150 | 0.362 | 1.005 | GBP 1.54 | GBP 330.36 | GBP 1,326.80 |
+| Churn probability | **0.668** | GBP 61.22 | **0.230** | **0.556** | **1.541** | GBP 2.09 | GBP 447.09 | GBP 1,326.80 |
+| Expected value | 0.501 | **GBP 232.37** | 0.174 | 0.421 | 1.166 | **GBP 13.48** | **GBP 2,884.17** | GBP 1,326.80 |
 
-`Scenario realized value` substitutes observed churn labels into the same assumed-retention formula. It is useful for retrospective scenario comparison, but remains non-causal.
+The value-aware policy captures fewer churners than churn-only ranking, but selects average margin
+at risk 3.8 times higher (GBP 232.37 versus GBP 61.22). Its lift remains above random at 1.166 but is
+lower than churn-only lift 1.541. That tradeoff produces 6.5 times the scenario expected value under
+the configured assumptions. `scenario_realized_net_value` is GBP 1,999.35 for value ranking versus
+GBP 179.32 for churn ranking, but it remains non-causal scenario evidence.
+
+### Exact run lineage
+
+| Item | Recorded value |
+|---|---|
+| Public executable source | `4e6d02e7fecc7bcf93b7dae704dc6405ec02bdda` |
+| Execution timestamp (UTC) | `2026-08-16T20:47:44.695505+00:00` |
+| UCI ZIP SHA-256 | `f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b` |
+| Dependency-lock identifier | `b23220ccf255f85efac4439e1c3468252515195a0ca3ff546a463d23fa4bdd95` |
+| Python | CPython 3.12.13 |
+| MLflow run | `08e13aea393443548ef56d9e96d9602f` in the local file store |
+
+Configuration hashes are recorded in [`artifacts/pipeline_summary.json`](artifacts/pipeline_summary.json)
+and [`artifacts/mlflow_run.json`](artifacts/mlflow_run.json). The synthetic fixture is used only by
+tests and CI and is never presented as professional model evidence.
 
 ### Key business recommendation
 
-Use the **value-aware policy** when the stated objective is maximizing scenario value under the configured margin and retention assumptions. Use the **churn-probability policy** when operational success is defined as finding the largest number of churners. Before spending real campaign budget, run a randomized retention experiment and replace the assumed 25% retention probability with an identified incremental effect.
+Use the **value-aware policy** when the stated objective is maximizing scenario value under the
+configured margin, campaign-effect, offer-acceptance, and cost assumptions. Use the
+**churn-probability policy** when operational success is defined as finding the largest number of
+churners. For the current scenario, value ranking is the recommendation because operations allow
+214 contacts while positive value allows 718 and the financial budget allows all 1,433: the 15%
+operational limit binds. Before spending real campaign budget, run a randomized retention experiment
+and replace the assumed incremental effect with an identified treatment effect.
 
 ![Policy comparison](reports/figures/policy_comparison.png)
+
+![Policy value decomposition](reports/figures/policy_value_decomposition.png)
 
 ## Business problem
 
@@ -62,6 +102,18 @@ The platform answers six operational questions:
 6. How should schema quality, feature drift, prediction drift, and mature-label performance be monitored?
 
 The output is a decision queue in [`artifacts/retention_targets.csv`](artifacts/retention_targets.csv), with hashed customer IDs, risk, value, action, rank, and selection reason.
+
+## Operational customer eligibility
+
+Every observation must have a complete 180-day feature window, a complete 45-day label window, at
+least two positive-purchase invoices, and recency no greater than 81 days. The 81-day ceiling is the
+rounded-up 90th percentile (80.091 days) across 6,384 repeat-purchase intervals observed no later
+than the final training cutoff. Validation and test outcomes were not used. See
+[`docs/customer-eligibility.md`](docs/customer-eligibility.md) and
+[`artifacts/eligibility_report.json`](artifacts/eligibility_report.json) for method, exclusions, and
+eligible-population prevalence. Across four cutoffs, 11,213 candidate observations became 5,154
+eligible observations; primary exclusions were stale recency (3,534) and insufficient invoices
+(2,525).
 
 ## Architecture
 
@@ -123,7 +175,11 @@ The pipeline compares:
 - class-weighted logistic regression at three regularization strengths;
 - HistGradientBoosting with controlled seed and externally configured hyperparameters.
 
-All statistical models use scikit-learn pipelines with median imputation, categorical imputation, one-hot encoding, and model-specific scaling. HistGradientBoosting won on validation PR-AUC and was sigmoid-calibrated on the later validation cohort. Selection is not based on ROC-AUC alone: PR-AUC, Brier score, calibration, budget metrics, lift, and scenario value are all reported.
+All statistical models use scikit-learn pipelines with median imputation, categorical imputation,
+one-hot encoding, and model-specific scaling. Logistic regression with `C=10` won on validation
+PR-AUC (0.6335 versus 0.5994 for HistGradientBoosting) and was sigmoid-calibrated on the later
+validation cohort. Selection is not based on ROC-AUC alone: PR-AUC, Brier score, calibration,
+budget metrics, lift, and scenario value are all reported.
 
 ![Calibration curve](reports/figures/calibration_curve.png)
 
@@ -139,16 +195,23 @@ Economic logic is isolated under `src/churn_platform/decisioning/`. The base for
 
 ```text
 expected_net_value =
-    churn_probability × assumed_retention_probability × estimated_margin_at_risk
+    churn_probability × incremental_retention_effect × estimated_margin_at_risk
     − contact_cost
-    − assumed_retention_probability × offer_cost
+    − offer_acceptance_probability × offer_cost_if_accepted
 ```
 
-Budget, costs, assumed retention, contact fraction, margin rate, and horizon are externalized in [`configs/decisioning.yaml`](configs/decisioning.yaml). Only positive-value customers are eligible for value-aware contact, and capacity is constrained by both total budget and maximum contact fraction.
+Budget, contact and offer costs, campaign effect, offer acceptance, contact fraction, margin rate,
+and the aligned 45-day horizon are externalized in
+[`configs/decisioning.yaml`](configs/decisioning.yaml). Only positive-value customers are eligible
+for value-aware contact. Reports distinguish financial capacity, operational capacity, positive-value
+eligibility, actual selected customers, the binding constraint, expected campaign cost, remaining
+budget, utilization, and expected value per contact.
 
 ![Scenario value by budget](reports/figures/value_by_budget.png)
 
-Sensitivity across 27 configurations produced estimated net value from GBP 4,963.88 to GBP 45,031.17. This range is evidence that economics—not only model discrimination—drives the decision.
+Sensitivity across 27 unique configurations spans incremental retention effect, offer acceptance,
+and margin assumptions. Expected net value ranges from GBP 258.91 to GBP 8,269.89, evidence that
+economics—not only model discrimination—drives the decision.
 
 ## Project structure
 
@@ -174,7 +237,8 @@ Python 3.11 or 3.12 is required.
 python -m venv .venv
 source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -r requirements.lock
+python -m pip install --no-deps -e .
 
 # Fast, credential-free end-to-end verification
 python -m churn_platform.cli pipeline --source fixture
@@ -191,7 +255,8 @@ Start the service after a pipeline run:
 
 ```bash
 make api
-curl http://localhost:8000/health
+curl http://localhost:8000/health/live
+curl http://localhost:8000/health/ready
 curl http://localhost:8000/model-info
 ```
 
@@ -212,11 +277,16 @@ curl -X POST http://localhost:8000/predict \
   }'
 ```
 
-Replace `/predict` with `/decision` to receive value at risk, expected net value, action, explanation, and complete economic scenario. See [`docs/api.md`](docs/api.md).
+Replace `/predict` with `/decision` to receive margin at risk, expected net value, economic
+eligibility, an explanation, the complete scenario, and a notice that final selection needs the
+portfolio. Use `/batch-decisions` for the actual budget-constrained ranking and final contact action.
+Batch requests are capped at 1,000 unique customer records. See [`docs/api.md`](docs/api.md).
 
 ## MLflow and Airflow
 
-Training logs parameters, feature names, periods, code version, final metrics, plots, economic configuration, signed model input schema, and the calibrated model.
+Training logs parameters, feature names, periods, exact source/data/configuration lineage, tracking
+URI, final metrics, plots, economic configuration, signed model input schema, and the calibrated
+model. URI precedence is explicit argument, `MLFLOW_TRACKING_URI`, then the local `mlruns` file URI.
 
 ```bash
 mlflow ui --backend-store-uri ./mlruns --port 5000
@@ -233,6 +303,10 @@ docker compose --profile orchestration up --build -d \
 ```
 
 Open Airflow at `http://localhost:8080` and MLflow at `http://localhost:5000`. Local credentials come from `.env`; only non-secret examples are versioned.
+
+Docker was unavailable in the release-authoring environment. No container-network smoke test or UI
+screenshot is claimed. Exact capture commands and acceptance checks are documented in
+[`docs/operational-evidence.md`](docs/operational-evidence.md).
 
 ## Docker
 
@@ -259,11 +333,21 @@ make test
 make ci
 ```
 
-The verified local suite contains 16 tests and achieved **91.5% line/branch coverage combined (92% rounded)** across the package, above the 80% threshold. GitHub Actions installs from scratch, runs lint/format checks, tests with coverage, the complete fixture pipeline, API import, and DAG structure checks. It never downloads UCI or requires credentials.
+The verified suite contains 22 tests and achieved **86.2% combined line/branch coverage**, above the
+80% gate. It covers eligibility, leakage, horizon alignment, economic assumptions, every campaign
+constraint, MLflow URI precedence, readiness/degraded states, portfolio API behavior, monitoring,
+and DAG structure. Coverage must remain at or above 80%. GitHub Actions installs from the lock,
+runs lint/format checks, unit and integration tests, the complete fixture pipeline, API import and
+behavior, DAG contract, and Docker Compose configuration. It never downloads UCI or requires
+credentials.
 
 ## Monitoring
 
-The monitoring module checks missing columns, numeric type errors, reference ranges, missingness changes, new categories, PSI, KS, probability drift, and performance after labels mature. The published UCI test batch raised one diagnostic warning: customer-tenure PSI = 0.346. This is expected context for a later temporal cohort and requires investigation; it does not trigger automated retraining.
+The monitoring module checks missing columns, numeric type errors, reference ranges, missingness
+changes, new categories, PSI, KS, probability drift, and performance after labels mature. The
+published eligible UCI test batch raised two diagnostic warnings for customer tenure: PSI 0.359 and
+KS 0.163. This temporal-cohort change requires investigation; it does not trigger automated
+retraining.
 
 See [`reports/monitoring_report.md`](reports/monitoring_report.md). Schema/type failures should block scoring. Distribution and performance alerts require human review.
 
@@ -274,7 +358,8 @@ See [`reports/monitoring_report.md`](reports/monitoring_report.md). Schema/type 
 - Missing CustomerID rows cannot support customer-level snapshots.
 - Margin is estimated from historical spend; actual gross margin is unavailable.
 - Campaign consent, deliverability, capacity, and fairness outcomes are absent.
-- The retention probability is not a causal effect.
+- Incremental retention effect and offer acceptance probability are scenario assumptions, not causal estimates.
+- A 90-day economic view requires a separately trained 90-day model or survival analysis; the 45-day probability is not extrapolated.
 - Monitoring compares temporal cohorts but cannot diagnose every business regime change.
 
 ## Responsible use

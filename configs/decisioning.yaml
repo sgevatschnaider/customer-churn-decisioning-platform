@@ -2,11 +2,11 @@ scenario_name: base_case
 currency: GBP
 total_budget: 12000.0
 contact_cost: 2.0
-offer_cost: 12.0
-retention_probability: 0.25
+offer_cost_if_accepted: 12.0
+offer_acceptance_probability: 0.35
+incremental_retention_effect: 0.20
 max_contact_fraction: 0.15
-economic_horizon_days: 90
+economic_horizon_days: 45
 gross_margin_rate: 0.30
 minimum_customer_margin: 20.0
 random_seed: 42
-

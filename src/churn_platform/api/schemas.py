@@ -13,6 +13,7 @@ class CustomerFeatures(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     customer_id: str = Field(min_length=1, max_length=128)
+    observation_history_complete: bool = True
     recency_days: float = Field(ge=0, le=10_000)
     purchase_frequency: float = Field(ge=0, le=10_000)
     monetary_value: float = Field(ge=0, le=1_000_000_000)
@@ -44,10 +45,50 @@ class PredictResponse(BaseModel):
 
 
 class DecisionResponse(PredictResponse):
-    """Customer score augmented with scenario-based economic decisioning."""
+    """Individual economics without pretending to make a portfolio decision."""
 
-    estimated_value_at_risk: float
+    margin_at_risk: float
     expected_net_value: float
-    recommended_action: Literal["contact", "do_not_contact"]
+    economic_eligibility: bool
     reason: str
     economic_scenario: dict[str, Any]
+    portfolio_selection_notice: str
+
+
+class BatchDecisionRequest(BaseModel):
+    """A bounded portfolio that can be ranked under shared campaign constraints."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    customers: list[CustomerFeatures] = Field(min_length=1, max_length=1_000)
+
+
+class BatchDecisionItem(BaseModel):
+    """One customer outcome after portfolio-wide ranking."""
+
+    customer_id: str
+    churn_probability: float = Field(ge=0, le=1)
+    margin_at_risk: float
+    expected_net_value: float
+    economic_eligibility: bool
+    recommended_action: Literal["contact", "do_not_contact"]
+    policy_rank: int = Field(ge=1)
+    reason: str
+
+
+class BatchDecisionResponse(BaseModel):
+    """Portfolio selections plus the campaign constraint that determined capacity."""
+
+    model_version: str
+    scoring_timestamp: str
+    economic_scenario: dict[str, Any]
+    binding_constraint: str
+    expected_campaign_cost: float
+    remaining_budget: float
+    budget_utilization_percentage: float
+    budget_based_contact_capacity: int
+    operations_based_contact_capacity: int
+    economically_eligible_customers: int
+    actual_selected_customers: int
+    expected_value_per_contacted_customer: float
+    decisions: list[BatchDecisionItem]

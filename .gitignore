@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.pytest-tmp*/
 .ruff_cache/
 .coverage
 htmlcov/
@@ -26,6 +27,7 @@ artifacts/*.joblib
 artifacts/*.json
 artifacts/*.parquet
 !artifacts/data_validation.json
+!artifacts/eligibility_report.json
 !artifacts/metrics.json
 !artifacts/mlflow_run.json
 !artifacts/pipeline_summary.json

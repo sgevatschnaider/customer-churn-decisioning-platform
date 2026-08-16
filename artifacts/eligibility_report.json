@@ -1,0 +1,125 @@
+{
+  "threshold_derivation": {
+    "training_cutoff": "2011-07-17",
+    "quantile": 0.9,
+    "observed_interval_days": 80.09104166666665,
+    "max_recency_days": 81,
+    "repeat_intervals": 6384,
+    "training_customers": 3051,
+    "repeat_customers": 1702
+  },
+  "overall": {
+    "total_customers_before_eligibility": 11213,
+    "eligible_customers": 5154,
+    "excluded_customers": 6059,
+    "eligible_churn_prevalence": 0.42840512223515714,
+    "criterion_failure_counts": {
+      "incomplete_observation_history": 0,
+      "incomplete_future_label_horizon": 0,
+      "recency_above_maximum": 3534,
+      "insufficient_invoices": 5231
+    },
+    "primary_exclusion_reasons": {
+      "insufficient_invoices": 2525,
+      "recency_above_maximum": 3534
+    }
+  },
+  "by_cutoff": [
+    {
+      "total_customers_before_eligibility": 2659,
+      "eligible_customers": 1182,
+      "excluded_customers": 1477,
+      "eligible_churn_prevalence": 0.4593908629441624,
+      "criteria": {
+        "max_recency_days": 81,
+        "minimum_invoices": 2,
+        "observation_history_complete": true,
+        "future_label_horizon_complete": true
+      },
+      "criterion_failure_counts": {
+        "incomplete_observation_history": 0,
+        "incomplete_future_label_horizon": 0,
+        "recency_above_maximum": 823,
+        "insufficient_invoices": 1303
+      },
+      "primary_exclusion_reasons": {
+        "recency_above_maximum": 823,
+        "insufficient_invoices": 654
+      },
+      "split": "train",
+      "cutoff_date": "2011-06-01"
+    },
+    {
+      "total_customers_before_eligibility": 2757,
+      "eligible_customers": 1284,
+      "excluded_customers": 1473,
+      "eligible_churn_prevalence": 0.4766355140186916,
+      "criteria": {
+        "max_recency_days": 81,
+        "minimum_invoices": 2,
+        "observation_history_complete": true,
+        "future_label_horizon_complete": true
+      },
+      "criterion_failure_counts": {
+        "incomplete_observation_history": 0,
+        "incomplete_future_label_horizon": 0,
+        "recency_above_maximum": 886,
+        "insufficient_invoices": 1293
+      },
+      "primary_exclusion_reasons": {
+        "recency_above_maximum": 886,
+        "insufficient_invoices": 587
+      },
+      "split": "train",
+      "cutoff_date": "2011-07-17"
+    },
+    {
+      "total_customers_before_eligibility": 2772,
+      "eligible_customers": 1255,
+      "excluded_customers": 1517,
+      "eligible_churn_prevalence": 0.42709163346613543,
+      "criteria": {
+        "max_recency_days": 81,
+        "minimum_invoices": 2,
+        "observation_history_complete": true,
+        "future_label_horizon_complete": true
+      },
+      "criterion_failure_counts": {
+        "incomplete_observation_history": 0,
+        "incomplete_future_label_horizon": 0,
+        "recency_above_maximum": 990,
+        "insufficient_invoices": 1278
+      },
+      "primary_exclusion_reasons": {
+        "recency_above_maximum": 990,
+        "insufficient_invoices": 527
+      },
+      "split": "validation",
+      "cutoff_date": "2011-09-01"
+    },
+    {
+      "total_customers_before_eligibility": 3025,
+      "eligible_customers": 1433,
+      "excluded_customers": 1592,
+      "eligible_churn_prevalence": 0.36078157711095604,
+      "criteria": {
+        "max_recency_days": 81,
+        "minimum_invoices": 2,
+        "observation_history_complete": true,
+        "future_label_horizon_complete": true
+      },
+      "criterion_failure_counts": {
+        "incomplete_observation_history": 0,
+        "incomplete_future_label_horizon": 0,
+        "recency_above_maximum": 835,
+        "insufficient_invoices": 1357
+      },
+      "primary_exclusion_reasons": {
+        "recency_above_maximum": 835,
+        "insufficient_invoices": 757
+      },
+      "split": "test",
+      "cutoff_date": "2011-10-17"
+    }
+  ]
+}
