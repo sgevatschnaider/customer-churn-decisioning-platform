@@ -241,6 +241,14 @@ def train_and_select(
     mlflow.set_tracking_uri(resolved_tracking_uri)
     mlflow.set_experiment("customer-churn-decisioning")
     with mlflow.start_run(run_name=f"{bundle.model_name}-temporal-test") as run:
+        source_sha = str(metadata["source_commit"])
+        mlflow.set_tags(
+            {
+                "source_commit": source_sha,
+                "mlflow.source.git.commit": source_sha,
+                "source_mode": str(metadata.get("source_mode", "not-recorded")),
+            }
+        )
         mlflow.log_params(
             {
                 "selected_model": bundle.model_name,

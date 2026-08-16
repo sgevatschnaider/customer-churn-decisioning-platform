@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import importlib
+import json
 
+import mlflow
 import pandas as pd
 from fastapi.testclient import TestClient
+from mlflow.tracking import MlflowClient
 
 from churn_platform.api.main import create_app
 from churn_platform.models.train import load_model_bundle
@@ -49,6 +52,13 @@ def test_complete_fixture_pipeline(pipeline_result, project_root) -> None:
     assert (project_root / "artifacts" / "eligibility_report.json").exists()
     assert bundle.run_metadata["dependency_lock_identifier"] != "missing-lockfile"
     assert bundle.tracking_uri.startswith("file:")
+    run_metadata = json.loads(
+        (project_root / "artifacts" / "mlflow_run.json").read_text(encoding="utf-8")
+    )
+    mlflow.set_tracking_uri(run_metadata["tracking_uri"])
+    tracked_run = MlflowClient().get_run(run_metadata["run_id"])
+    assert tracked_run.data.tags["source_commit"] == bundle.run_metadata["source_commit"]
+    assert tracked_run.data.tags["mlflow.source.git.commit"] == bundle.run_metadata["source_commit"]
 
 
 def test_api_endpoints_and_validation(pipeline_result) -> None:
