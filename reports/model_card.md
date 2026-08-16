@@ -20,7 +20,8 @@ Models were fitted on historical snapshots, selected only on a later validation 
 ## Selected model
 
 - Model: hist_gradient_boosting
-- Version: `a88e9a01dcdcbc706a4c71ee918f466dbec17bdf`
+- Execution source version: `a88e9a01dcdcbc706a4c71ee918f466dbec17bdf` (local commit recorded by the actual MLflow run)
+- Published code-equivalent commit: `b9c49045b5823553a2ab88774129384151323b11` (same source and tests in the public GitHub history)
 - Trained at: 2026-08-15T23:49:15.264421+00:00
 
 ## Test metrics
