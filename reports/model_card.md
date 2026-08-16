@@ -29,7 +29,7 @@ Models were fitted on historical snapshots, selected only on a later validation 
 - Exact public source commit: `4e6d02e7fecc7bcf93b7dae704dc6405ec02bdda`
 - Execution timestamp: 2026-08-16T20:47:44.695505+00:00
 - Trained at: 2026-08-16T20:47:48.677557+00:00
-- MLflow tracking URI: `file:///C:/Users/Sergio/Documents/Codex/2026-08-15/este-prompt-est-pensado-para-que/work/customer-churn-decisioning-platform/mlruns`
+- MLflow tracking backend: local-file-store (`<local-mlruns>`)
 - Dataset SHA-256: `f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b`
 - Dependency lock identifier: `b23220ccf255f85efac4439e1c3468252515195a0ca3ff546a463d23fa4bdd95`
 - Python: 3.12.13

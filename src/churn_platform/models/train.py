@@ -32,7 +32,7 @@ from churn_platform.features.build_features import (
 )
 from churn_platform.models.calibrate import ProbabilityCalibrator
 from churn_platform.models.evaluate import evaluate_predictions, generate_evaluation_plots
-from churn_platform.reproducibility import source_commit
+from churn_platform.reproducibility import public_tracking_reference, source_commit
 
 LOGGER = logging.getLogger(__name__)
 
@@ -207,7 +207,7 @@ def train_and_select(
     metadata = dict(run_metadata or {})
     metadata.setdefault("source_commit", code_version())
     metadata.setdefault("execution_timestamp_utc", datetime.now(UTC).isoformat())
-    metadata["mlflow_tracking_uri"] = resolved_tracking_uri
+    metadata.update(public_tracking_reference(resolved_tracking_uri))
     bundle = ModelBundle(
         estimator=calibrated,
         model_name=str(winner["model"]),
@@ -258,7 +258,7 @@ def train_and_select(
                 "validation_cutoff": bundle.training_period["validation_cutoff"],
                 "test_cutoff": bundle.training_period["test_cutoff"],
                 "code_version": bundle.model_version,
-                "tracking_uri": resolved_tracking_uri,
+                "tracking_backend": metadata["tracking_backend"],
                 "python_version": metadata.get("python_version", "not-recorded"),
                 "dependency_lock_identifier": metadata.get(
                     "dependency_lock_identifier", "not-recorded"
@@ -294,7 +294,6 @@ def train_and_select(
                 {
                     "run_id": run.info.run_id,
                     "experiment_id": run.info.experiment_id,
-                    "tracking_uri": resolved_tracking_uri,
                     **metadata,
                 },
                 indent=2,

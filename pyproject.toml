@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "customer-churn-decisioning-platform"
-version = "1.0.0"
+version = "1.0.1"
 description = "Production-oriented customer churn prediction and economic decisioning platform."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
@@ -48,6 +48,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers --cov=churn_platform --cov-report=term-missing --cov-fail-under=80"
 testpaths = ["tests"]
+cache_dir = ".pytest-tmp-cache"
 markers = [
   "integration: integration tests that exercise multiple components",
 ]

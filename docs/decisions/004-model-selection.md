@@ -13,5 +13,4 @@ Compare a business heuristic, regularized class-weighted logistic regression, an
 
 ## Consequences
 
-Logistic regression provides a strong interpretable reference; HistGradientBoosting captures interactions and won the published validation. Avoiding XGBoost/LightGBM reduces build risk and image size while preserving a credible nonlinear candidate.
-
+Logistic regression provides a strong interpretable reference and, with `C=10`, won the corrected published validation on PR-AUC (0.6335 versus 0.5994 for HistGradientBoosting). HistGradientBoosting still supplies a credible nonlinear candidate that can capture interactions. Avoiding XGBoost/LightGBM reduces build risk and image size without removing nonlinear model comparison.

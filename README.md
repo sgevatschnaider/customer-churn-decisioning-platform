@@ -29,6 +29,23 @@ These are actual UCI outputs from public source commit
 not fixture metrics. Expected value is scenario analysis—not causal incremental profit—because the
 dataset contains no retention treatments or campaign outcomes.
 
+## 60-second project tour
+
+| Question | Answer |
+|---|---|
+| Business decision | Rank active repeat buyers for retention review under financial and operational limits. |
+| Data | Official UCI Online Retail transactions; the complete dataset is downloaded, checksummed, and not redistributed here. |
+| Modeling | Leakage-safe temporal snapshots, logistic regression and HistGradientBoosting candidates, validation-only selection, sigmoid calibration, one final temporal test. |
+| Observed result | PR-AUC 0.5412, ROC-AUC 0.7058, and churn-policy lift 1.5413 at 15% on 1,433 eligible test customers. |
+| Economic scenario | The value-aware queue selected 214 customers and estimated GBP 2,884.17 net value under documented assumptions; this is not causal profit. |
+| Delivery stack | Reusable Python package, MLflow tracking, eleven-task Airflow DAG, FastAPI, monitoring, Docker Compose, and SHA-pinned CI. |
+
+Start with the [architecture](docs/architecture.md), [business results](reports/business_results.md),
+[model card](reports/model_card.md), [monitoring report](reports/monitoring_report.md),
+[leakage controls](docs/leakage-prevention.md), [API contract](docs/api.md),
+[operational evidence](docs/operational-evidence.md), or the
+[v1.0.0 evidence release](https://github.com/sgevatschnaider/customer-churn-decisioning-platform/releases/tag/v1.0.0).
+
 ## Actual results
 
 ### Final temporal test metrics
@@ -75,6 +92,10 @@ GBP 179.32 for churn ranking, but it remains non-causal scenario evidence.
 Configuration hashes are recorded in [`artifacts/pipeline_summary.json`](artifacts/pipeline_summary.json)
 and [`artifacts/mlflow_run.json`](artifacts/mlflow_run.json). The synthetic fixture is used only by
 tests and CI and is never presented as professional model evidence.
+
+Public manifests deliberately describe the local MLflow backend as `local-file-store` at
+`<local-mlruns>` and store dataset locations as portable repository paths. Runtime code retains the
+real tracking URI only inside ignored local model and MLflow state, never in tracked reports.
 
 ### Key business recommendation
 
@@ -333,13 +354,17 @@ make test
 make ci
 ```
 
-The verified suite contains 22 tests and achieved **86.2% combined line/branch coverage**, above the
-80% gate. It covers eligibility, leakage, horizon alignment, economic assumptions, every campaign
-constraint, MLflow URI precedence, readiness/degraded states, portfolio API behavior, monitoring,
-and DAG structure. Coverage must remain at or above 80%. GitHub Actions installs from the lock,
-runs lint/format checks, unit and integration tests, the complete fixture pipeline, API import and
-behavior, DAG contract, and Docker Compose configuration. It never downloads UCI or requires
-credentials.
+The verified suite contains **26 tests** and achieved **90.7% combined line/branch coverage**, above
+the 80% gate. It covers eligibility, leakage,
+horizon alignment, economic assumptions, every campaign constraint, MLflow runtime/public metadata
+separation, readiness/degraded states, portfolio API behavior, monitoring, tracked-file privacy, and
+DAG structure. Local environments, the quality job, and the API image install from
+`requirements.lock`. The Airflow image instead starts from the pinned
+`apache/airflow:2.10.5-python3.11` base and installs the project's direct dependencies at the exact
+versions declared in `pyproject.toml`; it deliberately does not replace Airflow's constrained
+transitive environment with the complete lock. GitHub Actions builds both images, imports the real
+DAG with `DagBag`, and checks degraded and ready API containers through HTTP, including the current
+`/predict` and `/decision` response contracts. CI never downloads UCI or requires credentials.
 
 ## Monitoring
 
@@ -358,9 +383,12 @@ See [`reports/monitoring_report.md`](reports/monitoring_report.md). Schema/type 
 - Missing CustomerID rows cannot support customer-level snapshots.
 - Margin is estimated from historical spend; actual gross margin is unavailable.
 - Campaign consent, deliverability, capacity, and fairness outcomes are absent.
-- Incremental retention effect and offer acceptance probability are scenario assumptions, not causal estimates.
+- Incremental retention effect and offer acceptance probability are scenario assumptions, not causal estimates; validate them through a randomized retention experiment before operational use.
 - A 90-day economic view requires a separately trained 90-day model or survival analysis; the 45-day probability is not extrapolated.
 - Monitoring compares temporal cohorts but cannot diagnose every business regime change.
+- MLflow and Airflow provide reproducible local architecture, not managed enterprise infrastructure.
+- Complete source data and large model artifacts are deliberately not versioned.
+- Major Python, Airflow, MLflow, pandas, and PyArrow updates proposed by Dependabot require a controlled migration and lockfile regeneration.
 
 ## Responsible use
 
