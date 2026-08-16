@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, TypeVar
 
 import yaml
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(
+    os.getenv("CHURN_PLATFORM_PROJECT_ROOT", Path(__file__).resolve().parents[2])
+).resolve()
 T = TypeVar("T")
 
 

@@ -11,6 +11,11 @@ from churn_platform.data.fixtures import generate_fixture
 from churn_platform.data.ingest import ingest_transactions, normalize_transactions
 from churn_platform.data.validation import DataValidationError, validate_transactions
 from churn_platform.models.train import resolve_tracking_uri
+from churn_platform.reproducibility import (
+    public_repository_path,
+    public_tracking_reference,
+    source_commit,
+)
 
 
 def test_configuration_loads_and_paths_resolve() -> None:
@@ -88,3 +93,23 @@ def test_mlflow_tracking_uri_precedence(monkeypatch: pytest.MonkeyPatch) -> None
     assert resolve_tracking_uri() == "http://mlflow:5000"
     monkeypatch.delenv("MLFLOW_TRACKING_URI")
     assert resolve_tracking_uri().startswith("file:")
+
+
+def test_public_lineage_redacts_runtime_locations(tmp_path) -> None:
+    local_reference = public_tracking_reference(tmp_path.as_uri())
+    assert local_reference == {
+        "tracking_backend": "local-file-store",
+        "tracking_location": "<local-mlruns>",
+    }
+    server_reference = public_tracking_reference("https://tracking.internal.invalid:5000")
+    assert server_reference["tracking_location"] == "<configured-tracking-server>"
+    assert public_repository_path("data\\raw\\online_retail.zip") == ("data/raw/online_retail.zip")
+
+
+def test_explicit_source_commit_is_validated(monkeypatch: pytest.MonkeyPatch) -> None:
+    commit = "a" * 40
+    monkeypatch.setenv("CHURN_PLATFORM_SOURCE_COMMIT", commit)
+    assert source_commit() == commit
+    monkeypatch.setenv("CHURN_PLATFORM_SOURCE_COMMIT", "not-a-commit")
+    with pytest.raises(ValueError, match="40-character Git SHA"):
+        source_commit()

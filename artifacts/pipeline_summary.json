@@ -90,11 +90,12 @@
       "model.yaml": "2c71c5ee8111de6a43ac33b89f9a44bbdae455188b98e3182b18d7070d1a9a12"
     },
     "dataset_sha256": "f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b",
-    "dataset_path": "data\\raw\\online_retail.zip",
+    "dataset_path": "data/raw/online_retail.zip",
     "source_mode": "uci",
     "python_version": "3.12.13",
     "python_implementation": "CPython",
     "dependency_lock_identifier": "b23220ccf255f85efac4439e1c3468252515195a0ca3ff546a463d23fa4bdd95",
-    "mlflow_tracking_uri": "file:///C:/Users/Sergio/Documents/Codex/2026-08-15/este-prompt-est-pensado-para-que/work/customer-churn-decisioning-platform/mlruns"
+    "tracking_backend": "local-file-store",
+    "tracking_location": "<local-mlruns>"
   }
 }

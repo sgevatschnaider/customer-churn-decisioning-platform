@@ -55,7 +55,9 @@ def test_complete_fixture_pipeline(pipeline_result, project_root) -> None:
     run_metadata = json.loads(
         (project_root / "artifacts" / "mlflow_run.json").read_text(encoding="utf-8")
     )
-    mlflow.set_tracking_uri(run_metadata["tracking_uri"])
+    assert run_metadata["tracking_backend"] == "local-file-store"
+    assert run_metadata["tracking_location"] == "<local-mlruns>"
+    mlflow.set_tracking_uri(bundle.tracking_uri)
     tracked_run = MlflowClient().get_run(run_metadata["run_id"])
     assert tracked_run.data.tags["source_commit"] == bundle.run_metadata["source_commit"]
     assert tracked_run.data.tags["mlflow.source.git.commit"] == bundle.run_metadata["source_commit"]

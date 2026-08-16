@@ -9,6 +9,7 @@ import pandas as pd
 
 from churn_platform.decisioning.economics import EconomicScenario
 from churn_platform.models.train import ModelBundle
+from churn_platform.reproducibility import public_tracking_reference
 
 
 def _metric_list(metrics: dict[str, Any]) -> list[str]:
@@ -34,6 +35,7 @@ def render_model_card(
     feature_start = snapshots["cutoff_date"].min().date()
     feature_end = snapshots["cutoff_date"].max().date()
     metadata = bundle.run_metadata
+    tracking = public_tracking_reference(bundle.tracking_uri)
     eligibility = (eligibility_report or {}).get("overall", {})
     test_eligibility = next(
         (
@@ -86,7 +88,8 @@ def render_model_card(
         f"- Exact public source commit: `{metadata.get('source_commit', 'not recorded')}`",
         f"- Execution timestamp: " f"{metadata.get('execution_timestamp_utc', 'not recorded')}",
         f"- Trained at: {bundle.trained_at_utc}",
-        f"- MLflow tracking URI: `{bundle.tracking_uri}`",
+        f"- MLflow tracking backend: {tracking['tracking_backend']} "
+        f"(`{tracking['tracking_location']}`)",
         f"- Dataset SHA-256: `{metadata.get('dataset_sha256', 'not recorded')}`",
         f"- Dependency lock identifier: "
         f"`{metadata.get('dependency_lock_identifier', 'not recorded')}`",
