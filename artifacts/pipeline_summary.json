@@ -10,47 +10,91 @@
     "cancellation_rate": 0.021888803403887137,
     "negative_price_rate": 3.690656549346846e-06
   },
-  "selected_model": "hist_gradient_boosting",
+  "selected_model": "logistic_regression_c_10",
   "test_metrics": {
-    "roc_auc": 0.7147699686705744,
-    "average_precision": 0.7026044964954636,
-    "precision": 0.7637969094922737,
-    "recall": 0.21598002496878901,
-    "f1": 0.3367396593673966,
-    "brier_score": 0.21279184176271917,
-    "recall_at_budget": 0.21598002496878901,
-    "precision_at_budget": 0.7637969094922737,
-    "lift_at_budget": 1.4422507186105666,
+    "roc_auc": 0.7058377606784185,
+    "average_precision": 0.5411966443522058,
+    "precision": 0.5560747663551402,
+    "recall": 0.23017408123791103,
+    "f1": 0.32558139534883723,
+    "brier_score": 0.2087757481929096,
+    "recall_at_budget": 0.23017408123791103,
+    "precision_at_budget": 0.5560747663551402,
+    "lift_at_budget": 1.5413058804389088,
     "budget_fraction": 0.15,
-    "customers": 3025,
-    "contacted": 453,
-    "observed_churners": 1602,
+    "customers": 1433,
+    "contacted": 214,
+    "observed_churners": 517,
     "confusion_matrix": [
       [
-        1316,
-        107
+        821,
+        95
       ],
       [
-        1256,
-        346
+        398,
+        119
       ]
     ]
   },
   "value_policy": {
     "policy": "expected_value",
-    "customers": 3025,
-    "contact_capacity": 453,
-    "customers_contacted": 453,
-    "contact_rate": 0.1497520661157025,
-    "expected_net_value": 21156.58407711279,
-    "estimated_value_at_risk": 93686.33630845117,
-    "observed_churners_contacted": 192.0,
-    "observed_churners": 1602,
-    "recall_at_budget": 0.1198501872659176,
-    "precision_at_budget": 0.423841059602649,
-    "lift_at_budget": 0.8003240981885226,
-    "scenario_realized_net_value": 14588.611874999999,
+    "customers": 1433,
+    "contact_capacity": 214,
+    "budget_based_contact_capacity": 1433,
+    "operations_based_contact_capacity": 214,
+    "economically_eligible_customers": 718,
+    "binding_constraint": "operational_capacity",
+    "customers_contacted": 214,
+    "actual_selected_customers": 214,
+    "contact_rate": 0.14933705512909978,
+    "expected_net_value": 2884.1664685512833,
+    "expected_net_value_per_contact": 13.47741340444525,
+    "estimated_value_at_risk": 21054.83234275641,
+    "average_churn_probability": 0.5006035063704353,
+    "average_estimated_margin_at_risk": 232.36742873831776,
+    "expected_campaign_cost": 1326.8,
+    "remaining_budget": 10673.2,
+    "budget_utilization_percentage": 11.056666666666667,
+    "observed_churners_contacted": 90.0,
+    "observed_churners": 517,
+    "recall_at_budget": 0.17408123791102514,
+    "precision_at_budget": 0.4205607476635514,
+    "observed_churn_rate": 0.4205607476635514,
+    "lift_at_budget": 1.1656935230210235,
+    "scenario_realized_net_value": 1999.3466500000004,
     "benchmark_repetitions": 1
   },
-  "monitoring_status": "alert"
+  "monitoring_status": "alert",
+  "eligibility": {
+    "total_customers_before_eligibility": 11213,
+    "eligible_customers": 5154,
+    "excluded_customers": 6059,
+    "eligible_churn_prevalence": 0.42840512223515714,
+    "criterion_failure_counts": {
+      "incomplete_observation_history": 0,
+      "incomplete_future_label_horizon": 0,
+      "recency_above_maximum": 3534,
+      "insufficient_invoices": 5231
+    },
+    "primary_exclusion_reasons": {
+      "insufficient_invoices": 2525,
+      "recency_above_maximum": 3534
+    }
+  },
+  "run_metadata": {
+    "source_commit": "4e6d02e7fecc7bcf93b7dae704dc6405ec02bdda",
+    "execution_timestamp_utc": "2026-08-16T20:47:44.695505+00:00",
+    "configuration_hashes": {
+      "data.yaml": "6811e2705d4a299feb097eb520c767317f020b02cb1a05986d38a7c72f45cd26",
+      "decisioning.yaml": "418a951557596ef4b919052c3adc964bb3d493c10705e11767b5daf250f4bfde",
+      "model.yaml": "2c71c5ee8111de6a43ac33b89f9a44bbdae455188b98e3182b18d7070d1a9a12"
+    },
+    "dataset_sha256": "f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b",
+    "dataset_path": "data\\raw\\online_retail.zip",
+    "source_mode": "uci",
+    "python_version": "3.12.13",
+    "python_implementation": "CPython",
+    "dependency_lock_identifier": "b23220ccf255f85efac4439e1c3468252515195a0ca3ff546a463d23fa4bdd95",
+    "mlflow_tracking_uri": "file:///C:/Users/Sergio/Documents/Codex/2026-08-15/este-prompt-est-pensado-para-que/work/customer-churn-decisioning-platform/mlruns"
+  }
 }
