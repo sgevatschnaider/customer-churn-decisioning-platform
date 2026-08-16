@@ -56,6 +56,17 @@ services:
     volumes:
       - mlartifacts:/app/mlartifacts
       - mlflow_state:/app/mlflow-state
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     profiles: ["tracking", "orchestration"]
 
   api:
@@ -68,6 +79,17 @@ services:
     ports: ["8000:8000"]
     volumes:
       - ./artifacts:/app/artifacts:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     profiles: ["api"]
 
   airflow-init:

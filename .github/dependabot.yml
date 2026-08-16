@@ -4,9 +4,16 @@ updates:
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 4
     groups:
-      python-minor-and-patch:
+      compatible-runtime-minor-and-patch:
+        patterns: ["*"]
+        exclude-patterns:
+          - apache-airflow
+          - mlflow
+          - pandas
+          - pyarrow
+          - scikit-learn
         update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
@@ -15,9 +22,19 @@ updates:
     open-pull-requests-limit: 5
     groups:
       actions-minor-and-patch:
+        patterns: ["*"]
         update-types: [minor, patch]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      docker-patch:
+        patterns: ["*"]
+        update-types: [patch]
+    ignore:
+      - dependency-name: python
+        versions: [">=3.13"]
+      - dependency-name: apache/airflow
+        update-types: ["version-update:semver-major"]

@@ -91,7 +91,7 @@ def create_app(
     """Create an isolated application instance for runtime and tests."""
     application = FastAPI(
         title="Customer Churn Decisioning Platform API",
-        version="1.1.0",
+        version="1.0.1",
         description="Calibrated churn scoring and assumption-based retention decisioning.",
     )
     runtime = ModelRuntime(model_path)

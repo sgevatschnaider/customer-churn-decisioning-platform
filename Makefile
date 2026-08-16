@@ -4,8 +4,8 @@ SOURCE ?= fixture
 .PHONY: install data validate features train evaluate decision report pipeline api test lint format monitoring docker-up docker-down ci
 
 install:
-	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install -e ".[dev]"
+	$(PYTHON) -m pip install -r requirements.lock
+	$(PYTHON) -m pip install --no-deps -e .
 
 data:
 	$(PYTHON) -m churn_platform.cli stage ingest --source uci
@@ -36,7 +36,7 @@ api:
 	$(PYTHON) -m uvicorn churn_platform.api.main:app --reload --port 8000
 
 test:
-	$(PYTHON) -m pytest
+	$(PYTHON) -m pytest --basetemp=.pytest-tmp-ci
 
 lint:
 	$(PYTHON) -m ruff check .
@@ -56,6 +56,5 @@ docker-down:
 ci:
 	$(PYTHON) -m ruff check .
 	$(PYTHON) -m ruff format --check .
-	$(PYTHON) -m pytest
+	$(PYTHON) -m pytest --basetemp=.pytest-tmp-ci
 	$(PYTHON) -m churn_platform.cli pipeline --source fixture
-

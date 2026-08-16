@@ -2,10 +2,15 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
@@ -27,7 +32,7 @@ jobs:
       - name: Format check
         run: python -m ruff format --check .
       - name: Unit and integration tests with coverage
-        run: python -m pytest --cov-report=xml
+        run: python -m pytest --basetemp="${RUNNER_TEMP}/pytest" --cov-report=xml
       - name: Fixture pipeline smoke test
         run: python -m churn_platform.cli pipeline --source fixture
       - name: API import check
@@ -41,3 +46,55 @@ jobs:
         with:
           name: coverage-xml
           path: coverage.xml
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Validate Docker Compose
+        run: docker compose config
+      - name: Build API image
+        run: docker build --tag churn-platform-api:ci .
+      - name: Build Airflow image
+        run: docker build --file Dockerfile.airflow --tag churn-platform-airflow:ci .
+      - name: Import the real DAG with Airflow installed
+        run: |
+          docker run --rm churn-platform-airflow:ci python -c \
+            "from airflow.models import DagBag; bag=DagBag('/opt/airflow/dags', include_examples=False); assert not bag.import_errors, bag.import_errors; dag=bag.get_dag('customer_churn_decisioning_pipeline'); assert dag is not None; assert len(dag.task_ids) == 11"
+      - name: Verify degraded API container
+        run: |
+          docker run --detach --name churn-api-degraded --publish 8001:8000 churn-platform-api:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:8001/health/live > /dev/null; then break; fi
+            sleep 2
+          done
+          curl --fail --silent http://localhost:8001/health/live
+          test "$(curl --silent --output /tmp/degraded.json --write-out '%{http_code}' http://localhost:8001/health/ready)" = "503"
+          grep --quiet 'degraded' /tmp/degraded.json
+          docker rm --force churn-api-degraded
+      - name: Build a fixture model and verify ready API container
+        run: |
+          docker run --detach --name churn-api-ready --publish 8002:8000 \
+            --entrypoint sh churn-platform-api:ci -c \
+            "python -m churn_platform.cli pipeline --source fixture && exec uvicorn churn_platform.api.main:app --host 0.0.0.0 --port 8000"
+          for attempt in $(seq 1 90); do
+            status=$(curl --silent --output /tmp/ready.json --write-out '%{http_code}' http://localhost:8002/health/ready || true)
+            if [ "$status" = "200" ]; then break; fi
+            sleep 2
+          done
+          test "$(curl --silent --output /tmp/ready.json --write-out '%{http_code}' http://localhost:8002/health/ready)" = "200"
+          grep --quiet 'ready' /tmp/ready.json
+          docker rm --force churn-api-ready
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          docker logs churn-api-degraded 2>/dev/null || true
+          docker logs churn-api-ready 2>/dev/null || true
+      - name: Clean up containers
+        if: always()
+        run: |
+          docker rm --force churn-api-degraded 2>/dev/null || true
+          docker rm --force churn-api-ready 2>/dev/null || true
