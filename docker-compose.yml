@@ -1,0 +1,93 @@
+name: customer-churn-decisioning-platform
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile.airflow
+  environment: &airflow-environment
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-churn_local}:${POSTGRES_PASSWORD:-local_only_change_me}@postgres:5432/${POSTGRES_DB:-churn_platform}
+    PIPELINE_SOURCE: ${PIPELINE_SOURCE:-uci}
+    MLFLOW_TRACKING_URI: http://mlflow:5000
+  volumes:
+    - ./data:/opt/project/data
+    - ./artifacts:/opt/project/artifacts
+    - ./reports:/opt/project/reports
+    - ./mlruns:/opt/project/mlruns
+  depends_on:
+    postgres:
+      condition: service_healthy
+  profiles: ["orchestration"]
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-churn_local}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_only_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-churn_platform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-churn_local}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    profiles: ["orchestration"]
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - mlflow
+      - server
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --backend-store-uri
+      - sqlite:////app/mlflow-state/mlflow.db
+      - --default-artifact-root
+      - /app/mlartifacts
+    ports: ["5000:5000"]
+    volumes:
+      - mlartifacts:/app/mlartifacts
+      - mlflow_state:/app/mlflow-state
+    profiles: ["tracking", "orchestration"]
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      MODEL_PATH: /app/artifacts/model.joblib
+      DECISIONING_CONFIG: /app/configs/decisioning.yaml
+    ports: ["8000:8000"]
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+    profiles: ["api"]
+
+  airflow-init:
+    <<: *airflow-common
+    command: >
+      bash -c "airflow db migrate &&
+      airflow users create --role Admin --username $${AIRFLOW_ADMIN_USER:-admin}
+      --password $${AIRFLOW_ADMIN_PASSWORD:-local_only_change_me}
+      --firstname Local --lastname Admin --email local@example.invalid || true"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports: ["8080:8080"]
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+
+volumes:
+  postgres_data:
+  mlartifacts:
+  mlflow_state:

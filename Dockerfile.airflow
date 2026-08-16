@@ -1,0 +1,10 @@
+FROM apache/airflow:2.10.5-python3.11
+
+USER airflow
+COPY --chown=airflow:root pyproject.toml README.md LICENSE /opt/project/
+COPY --chown=airflow:root src /opt/project/src
+RUN pip install --no-cache-dir /opt/project
+COPY --chown=airflow:root configs /opt/project/configs
+COPY --chown=airflow:root dags /opt/airflow/dags
+WORKDIR /opt/project
+
