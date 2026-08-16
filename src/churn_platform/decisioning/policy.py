@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -13,6 +14,7 @@ import pandas as pd
 from churn_platform.decisioning.economics import (
     EconomicScenario,
     estimate_margin_at_risk,
+    expected_contact_cost,
     expected_net_value,
 )
 
@@ -22,16 +24,59 @@ import matplotlib.pyplot as plt
 PolicyName = Literal["random", "churn_probability", "expected_value"]
 
 
-def contact_capacity(customers: int, scenario: EconomicScenario) -> int:
-    """Return capacity constrained by both customer fraction and total budget."""
-    fraction_limit = int(np.floor(customers * scenario.max_contact_fraction))
-    worst_case_unit_cost = scenario.contact_cost + scenario.offer_cost
+@dataclass(frozen=True)
+class CampaignCapacity:
+    """Financial, operational, and economic limits for one ranked portfolio."""
+
+    budget_based_contact_capacity: int
+    operations_based_contact_capacity: int
+    economically_eligible_customers: int
+    actual_selected_customers: int
+    binding_constraint: str
+    expected_cost_per_contact: float
+
+
+def campaign_capacity(
+    customers: int,
+    scenario: EconomicScenario,
+    economically_eligible_customers: int | None = None,
+) -> CampaignCapacity:
+    """Calculate all campaign limits and identify the constraint that binds."""
+    scenario.validate()
+    expected_unit_cost = expected_contact_cost(scenario)
     budget_limit = (
         customers
-        if worst_case_unit_cost == 0
-        else int(np.floor(scenario.total_budget / worst_case_unit_cost))
+        if expected_unit_cost == 0
+        else min(customers, int(np.floor(scenario.total_budget / expected_unit_cost)))
     )
-    return max(0, min(fraction_limit, budget_limit, customers))
+    operations_limit = min(customers, int(np.floor(customers * scenario.max_contact_fraction)))
+    economic_limit = (
+        customers
+        if economically_eligible_customers is None
+        else min(customers, max(0, economically_eligible_customers))
+    )
+    selected = max(0, min(customers, budget_limit, operations_limit, economic_limit))
+    binding = []
+    if budget_limit == selected:
+        binding.append("financial_budget")
+    if operations_limit == selected:
+        binding.append("operational_capacity")
+    if economically_eligible_customers is not None and economic_limit == selected:
+        binding.append("positive_expected_value")
+    binding_constraint = binding[0] if len(binding) == 1 else "joint:" + "+".join(binding)
+    return CampaignCapacity(
+        budget_based_contact_capacity=budget_limit,
+        operations_based_contact_capacity=operations_limit,
+        economically_eligible_customers=economic_limit,
+        actual_selected_customers=selected,
+        binding_constraint=binding_constraint,
+        expected_cost_per_contact=expected_unit_cost,
+    )
+
+
+def contact_capacity(customers: int, scenario: EconomicScenario) -> int:
+    """Return the financial/operational capacity for compatibility callers."""
+    return campaign_capacity(customers, scenario).actual_selected_customers
 
 
 def _policy_score(frame: pd.DataFrame, policy: PolicyName, seed: int) -> np.ndarray:
@@ -64,33 +109,39 @@ def apply_retention_policy(
     ranked["expected_net_value"] = expected_net_value(
         ranked["churn_probability"], ranked["estimated_margin_at_risk"], scenario
     )
+    ranked["economic_eligibility"] = ranked["expected_net_value"].gt(0)
     ranked["policy_score"] = _policy_score(ranked, policy, scenario.random_seed)
     ranked = ranked.sort_values(
         ["policy_score", "customer_id"], ascending=[False, True], kind="stable"
     ).reset_index(drop=True)
-    capacity = contact_capacity(len(ranked), scenario)
+    economic_eligible = ranked["economic_eligibility"]
+    capacity = campaign_capacity(
+        len(ranked),
+        scenario,
+        int(economic_eligible.sum()) if policy == "expected_value" else None,
+    )
     ranked["policy_rank"] = np.arange(1, len(ranked) + 1)
     ranked["recommended_action"] = "do_not_contact"
-    eligible = ranked["expected_net_value"].gt(0) if policy == "expected_value" else True
+    eligible = economic_eligible if policy == "expected_value" else True
     if isinstance(eligible, bool):
         eligible = pd.Series(eligible, index=ranked.index)
-    selected_index = ranked.index[eligible][:capacity]
+    selected_index = ranked.index[eligible][: capacity.actual_selected_customers]
     ranked.loc[selected_index, "recommended_action"] = "contact"
     if policy == "expected_value":
         ranked["selection_reason"] = np.where(
             ranked["recommended_action"].eq("contact"),
-            "Highest positive expected net value within budget",
+            "Highest positive expected net value within portfolio constraints",
             np.where(
                 ranked["expected_net_value"].le(0),
                 "Non-positive expected net value",
-                "Below the budget-constrained value rank",
+                f"Below the rank allowed by {capacity.binding_constraint}",
             ),
         )
     elif policy == "churn_probability":
         ranked["selection_reason"] = np.where(
             ranked["recommended_action"].eq("contact"),
-            "Highest churn probability within budget",
-            "Below the budget-constrained churn rank",
+            "Highest churn probability within portfolio constraints",
+            f"Below the rank allowed by {capacity.binding_constraint}",
         )
     else:
         ranked["selection_reason"] = np.where(
@@ -102,14 +153,37 @@ def apply_retention_policy(
 
     selected = ranked["recommended_action"].eq("contact")
     observed_churn = int(ranked.loc[selected, "churn"].sum()) if "churn" in ranked.columns else None
+    expected_campaign_cost = float(selected.sum()) * capacity.expected_cost_per_contact
+    expected_total_value = float(ranked.loc[selected, "expected_net_value"].sum())
     summary: dict[str, Any] = {
         "policy": policy,
         "customers": int(len(ranked)),
-        "contact_capacity": capacity,
+        "contact_capacity": capacity.actual_selected_customers,
+        "budget_based_contact_capacity": capacity.budget_based_contact_capacity,
+        "operations_based_contact_capacity": capacity.operations_based_contact_capacity,
+        "economically_eligible_customers": int(economic_eligible.sum()),
+        "binding_constraint": capacity.binding_constraint,
         "customers_contacted": int(selected.sum()),
+        "actual_selected_customers": int(selected.sum()),
         "contact_rate": float(selected.mean()),
-        "expected_net_value": float(ranked.loc[selected, "expected_net_value"].sum()),
+        "expected_net_value": expected_total_value,
+        "expected_net_value_per_contact": (
+            expected_total_value / int(selected.sum()) if selected.any() else 0.0
+        ),
         "estimated_value_at_risk": float(ranked.loc[selected, "value_at_risk"].sum()),
+        "average_churn_probability": (
+            float(ranked.loc[selected, "churn_probability"].mean()) if selected.any() else 0.0
+        ),
+        "average_estimated_margin_at_risk": (
+            float(ranked.loc[selected, "estimated_margin_at_risk"].mean())
+            if selected.any()
+            else 0.0
+        ),
+        "expected_campaign_cost": expected_campaign_cost,
+        "remaining_budget": float(scenario.total_budget - expected_campaign_cost),
+        "budget_utilization_percentage": (
+            expected_campaign_cost / scenario.total_budget * 100 if scenario.total_budget else 0.0
+        ),
         "observed_churners_contacted": observed_churn,
         "scenario": scenario.to_dict(),
     }
@@ -123,14 +197,14 @@ def apply_retention_policy(
                 "observed_churners": total_churners,
                 "recall_at_budget": captured / total_churners if total_churners else 0.0,
                 "precision_at_budget": precision,
+                "observed_churn_rate": precision,
                 "lift_at_budget": precision / base_rate if base_rate else 0.0,
                 "scenario_realized_net_value": float(
                     (
                         ranked.loc[selected, "churn"]
-                        * scenario.retention_probability
+                        * scenario.incremental_retention_effect
                         * ranked.loc[selected, "estimated_margin_at_risk"]
-                        - scenario.contact_cost
-                        - scenario.retention_probability * scenario.offer_cost
+                        - capacity.expected_cost_per_contact
                     ).sum()
                 ),
             }
@@ -168,10 +242,17 @@ def compare_policies(
                 random_summaries.append(random_summary)
             averaged_keys = (
                 "expected_net_value",
+                "expected_net_value_per_contact",
                 "estimated_value_at_risk",
+                "average_churn_probability",
+                "average_estimated_margin_at_risk",
+                "expected_campaign_cost",
+                "remaining_budget",
+                "budget_utilization_percentage",
                 "observed_churners_contacted",
                 "recall_at_budget",
                 "precision_at_budget",
+                "observed_churn_rate",
                 "lift_at_budget",
                 "scenario_realized_net_value",
             )
@@ -187,17 +268,17 @@ def sensitivity_analysis(
     scenario: EconomicScenario,
     feature_history_days: int = 180,
 ) -> pd.DataFrame:
-    """Evaluate value-policy robustness across retention, offer, and margin assumptions."""
+    """Evaluate value-policy robustness across effect, acceptance, and margin assumptions."""
     rows = []
-    for retention_probability in (0.10, scenario.retention_probability, 0.40):
-        for offer_cost in (5.0, scenario.offer_cost, 25.0):
+    for incremental_effect in (0.10, scenario.incremental_retention_effect, 0.35):
+        for acceptance_probability in (0.20, scenario.offer_acceptance_probability, 0.50):
             for margin_multiplier in (0.75, 1.0, 1.25):
                 varied = EconomicScenario(
                     **{
                         **scenario.to_dict(),
                         "scenario_name": "sensitivity",
-                        "retention_probability": retention_probability,
-                        "offer_cost": offer_cost,
+                        "incremental_retention_effect": incremental_effect,
+                        "offer_acceptance_probability": acceptance_probability,
                         "gross_margin_rate": min(
                             1.0, scenario.gross_margin_rate * margin_multiplier
                         ),
@@ -211,11 +292,13 @@ def sensitivity_analysis(
                 )
                 rows.append(
                     {
-                        "retention_probability": retention_probability,
-                        "offer_cost": offer_cost,
+                        "incremental_retention_effect": incremental_effect,
+                        "offer_acceptance_probability": acceptance_probability,
                         "margin_multiplier": margin_multiplier,
                         "customers_contacted": summary["customers_contacted"],
                         "expected_net_value": summary["expected_net_value"],
+                        "expected_campaign_cost": summary["expected_campaign_cost"],
+                        "binding_constraint": summary["binding_constraint"],
                     }
                 )
     return pd.DataFrame(rows).drop_duplicates().reset_index(drop=True)
@@ -241,6 +324,7 @@ def save_decision_outputs(
         "churn_probability",
         "value_at_risk",
         "expected_net_value",
+        "economic_eligibility",
         "recommended_action",
         "selection_reason",
         "policy_rank",
@@ -264,6 +348,24 @@ def save_decision_outputs(
     plt.tight_layout()
     plt.savefig(figures / "policy_comparison.png", dpi=150, bbox_inches="tight")
     plt.close()
+
+    decomposition = comparison.set_index("policy")
+    figure, axes = plt.subplots(1, 3, figsize=(12, 4))
+    decomposition["average_churn_probability"].plot(kind="bar", ax=axes[0], color="#457B9D")
+    axes[0].set_title("Average churn probability")
+    axes[0].set_ylabel("Probability")
+    decomposition["average_estimated_margin_at_risk"].plot(kind="bar", ax=axes[1], color="#E9C46A")
+    axes[1].set_title("Average margin at risk")
+    axes[1].set_ylabel("GBP")
+    decomposition["expected_net_value_per_contact"].plot(kind="bar", ax=axes[2], color="#2A9D8F")
+    axes[2].set_title("Expected net value per contact")
+    axes[2].set_ylabel("GBP")
+    for axis in axes:
+        axis.tick_params(axis="x", rotation=20)
+    figure.suptitle("Why value-aware targeting can trade churn lift for margin")
+    figure.tight_layout()
+    figure.savefig(figures / "policy_value_decomposition.png", dpi=150, bbox_inches="tight")
+    plt.close(figure)
 
     budgets = np.linspace(0.05, 0.50, 10)
     values = []

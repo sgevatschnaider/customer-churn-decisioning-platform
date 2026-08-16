@@ -47,7 +47,12 @@ flowchart TB
 - `data`: official acquisition, canonical ingestion, deterministic fixture generation, and blocking validation.
 - `features`: all point-in-time aggregation and temporal lineage assertions.
 - `models`: candidate pipelines, temporal selection, probability calibration, test evaluation, plots, serialization, and MLflow.
-- `decisioning`: economic assumptions and three independently testable policies.
+- `features/eligibility`: training-derived active repeat-buyer contract applied before every model,
+  monitoring, scoring, and campaign stage.
+- `decisioning`: separated scenario assumptions, three independently testable policies, and explicit
+  financial, operational, and positive-value capacities.
+- `api`: single-record risk/economics and portfolio-level budget-constrained decisions with separate
+  liveness and readiness probes.
 - `monitoring`: reference baseline, batch drift, mature-label performance, and human-readable alerts.
 - `api`: strict request/response contracts and lazy artifact loading.
 - `pipeline`: idempotent file-backed stages shared by CLI and Airflow.
@@ -61,9 +66,11 @@ flowchart TB
 
 ## Data contracts
 
-Raw UCI names are normalized once. Models receive only the feature list declared in `build_features.py`. A serialized `ModelBundle` carries feature names, model version, training periods, validation comparison, and final metrics. Public decision artifacts hash source customer identifiers and never publish the raw workbook.
+Raw UCI names are normalized once. Models receive only eligible observations and the feature list
+declared in `build_features.py`. A serialized `ModelBundle` carries feature names, model version,
+training periods, validation comparison, final metrics, MLflow tracking URI, and exact run lineage.
+Public decision artifacts hash source customer identifiers and never publish the raw workbook.
 
 ## Failure behavior
 
 Missing columns, unparseable dates, excessive negative prices, excessive duplicates, incomplete label horizons, temporal overlap, missing model artifacts, and invalid API ranges fail explicitly. Drift warnings do not retrain or change a campaign automatically.
-

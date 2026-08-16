@@ -4,6 +4,11 @@
 
 An observation is a `(customer_id, cutoff_date)` pair. Every feature value is computed from events in `(cutoff − 180 days, cutoff]`. The target uses only positive purchases in `(cutoff, cutoff + 45 days]`. A purchase exactly at the cutoff can be a feature event and cannot be a label event.
 
+Before a snapshot can enter any partition, it must also satisfy the training-derived operational
+eligibility policy: complete observation and label windows, recency no greater than 81 days, and at
+least two historical invoices. Validation and test outcomes do not influence these rules. See
+[`customer-eligibility.md`](customer-eligibility.md).
+
 ## Label definition
 
 `churn = 1` when the customer has no positive, non-cancellation purchase during the complete future horizon. Returns and cancellations do not count as retained purchasing activity. A snapshot is rejected if the dataset does not cover the full label window.
@@ -35,8 +40,8 @@ The test suite verifies:
 - horizons are fully observable;
 - train, validation, and test windows are temporally isolated;
 - intentionally tampered lineage raises `PointInTimeError`.
+- stale or insufficient-history customers never enter model training or targeting.
 
 ## Known boundary
 
 The same customer may appear at multiple historical cutoffs. This is intentional rolling-origin supervision, not row-level random resampling. Statistical dependence across a customer's training snapshots is possible; no snapshot from the final temporal test is used during fitting.
-

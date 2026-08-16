@@ -7,11 +7,14 @@ import pytest
 from churn_platform.decisioning.economics import (
     EconomicScenario,
     estimate_margin_at_risk,
+    expected_contact_cost,
     expected_net_value,
+    validate_horizon_alignment,
 )
 from churn_platform.decisioning.policy import (
     anonymize_customer_id,
     apply_retention_policy,
+    campaign_capacity,
     compare_policies,
     contact_capacity,
     save_decision_outputs,
@@ -48,11 +51,49 @@ def test_economic_formula_and_capacity() -> None:
     scenario = EconomicScenario(total_budget=28, max_contact_fraction=0.5)
     margin = estimate_margin_at_risk([100, 1_000], scenario)
     values = expected_net_value([0.1, 0.9], margin, scenario)
-    assert margin.tolist() == [20.0, 150.0]
+    assert margin.tolist() == [20.0, 75.0]
     assert values[1] > values[0]
-    assert contact_capacity(20, scenario) == 2
+    assert expected_contact_cost(scenario) == pytest.approx(6.2)
+    assert contact_capacity(20, scenario) == 4
+    expected = 0.9 * scenario.incremental_retention_effect * 75 - 6.2
+    assert values[1] == pytest.approx(expected)
     with pytest.raises(ValueError):
-        EconomicScenario(retention_probability=1.1).validate()
+        EconomicScenario(incremental_retention_effect=1.1).validate()
+    validate_horizon_alignment(45, scenario)
+    with pytest.raises(ValueError, match="horizons"):
+        validate_horizon_alignment(90, scenario)
+
+
+@pytest.mark.parametrize(
+    ("scenario", "economic_count", "expected_binding"),
+    [
+        (
+            EconomicScenario(total_budget=10, max_contact_fraction=1.0),
+            100,
+            "financial_budget",
+        ),
+        (
+            EconomicScenario(total_budget=100_000, max_contact_fraction=0.10),
+            100,
+            "operational_capacity",
+        ),
+        (
+            EconomicScenario(total_budget=100_000, max_contact_fraction=1.0),
+            3,
+            "positive_expected_value",
+        ),
+    ],
+)
+def test_campaign_binding_constraints(
+    scenario: EconomicScenario, economic_count: int, expected_binding: str
+) -> None:
+    capacity = campaign_capacity(100, scenario, economic_count)
+    assert capacity.binding_constraint == expected_binding
+    assert capacity.actual_selected_customers == min(
+        capacity.budget_based_contact_capacity,
+        capacity.operations_based_contact_capacity,
+        capacity.economically_eligible_customers,
+    )
 
 
 def test_policy_comparison_sensitivity_and_public_output(tmp_path) -> None:
@@ -62,6 +103,9 @@ def test_policy_comparison_sensitivity_and_public_output(tmp_path) -> None:
     assert set(comparison["policy"]) == {"random", "churn_probability", "expected_value"}
     ranking, summary = apply_retention_policy(scores, scenario)
     assert summary["customers_contacted"] <= 4
+    assert summary["expected_campaign_cost"] <= scenario.total_budget
+    assert summary["remaining_budget"] >= 0
+    assert summary["binding_constraint"]
     assert (
         ranking.loc[ranking["recommended_action"].eq("contact"), "expected_net_value"].gt(0).all()
     )

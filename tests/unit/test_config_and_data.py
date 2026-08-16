@@ -10,12 +10,15 @@ from churn_platform.data.download import DownloadError, download_dataset, sha256
 from churn_platform.data.fixtures import generate_fixture
 from churn_platform.data.ingest import ingest_transactions, normalize_transactions
 from churn_platform.data.validation import DataValidationError, validate_transactions
+from churn_platform.models.train import resolve_tracking_uri
 
 
 def test_configuration_loads_and_paths_resolve() -> None:
     config = load_data_config()
     assert config.history_days == 180
     assert config.horizon_days == 45
+    assert config.eligibility_config().max_recency_days == 81
+    assert config.eligibility_config().minimum_invoices == 2
     assert project_path("configs/data.yaml").exists()
     assert load_yaml("configs/model.yaml")["random_seed"] == 42
     with pytest.raises(ConfigurationError):
@@ -77,3 +80,11 @@ def test_archive_checksum_and_integrity(tmp_path) -> None:
             tmp_path / "copy.xlsx",
             "0" * 64,
         )
+
+
+def test_mlflow_tracking_uri_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://mlflow:5000")
+    assert resolve_tracking_uri("http://explicit:5001") == "http://explicit:5001"
+    assert resolve_tracking_uri() == "http://mlflow:5000"
+    monkeypatch.delenv("MLFLOW_TRACKING_URI")
+    assert resolve_tracking_uri().startswith("file:")

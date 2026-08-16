@@ -11,6 +11,11 @@ fixture_path: data/fixtures/transactions.csv
 snapshots_path: data/processed/customer_snapshots.parquet
 history_days: 180
 horizon_days: 45
+eligibility:
+  max_recency_days: 81
+  minimum_invoices: 2
+  recency_quantile: 0.90
+  derived_from_training_cutoff: "2011-07-17"
 cutoffs:
   train:
     - "2011-06-01"

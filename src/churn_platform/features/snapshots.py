@@ -8,6 +8,10 @@ from itertools import pairwise
 import pandas as pd
 
 from churn_platform.features.build_features import aggregate_customer_features
+from churn_platform.features.eligibility import (
+    apply_customer_eligibility,
+    assert_eligibility_integrity,
+)
 
 SPLIT_ORDER = ("train", "validation", "test")
 
@@ -28,6 +32,8 @@ def build_snapshot(
     split: str,
     history_days: int,
     horizon_days: int,
+    max_recency_days: int = 81,
+    minimum_invoices: int = 2,
 ) -> pd.DataFrame:
     """Build one point-in-time customer observation table and future-only label."""
     cutoff_timestamp = pd.Timestamp(cutoff)
@@ -35,6 +41,9 @@ def build_snapshot(
     label_start = cutoff_timestamp + pd.Timedelta(nanoseconds=1)
     label_end = cutoff_timestamp + pd.Timedelta(days=horizon_days)
     maximum_observed = transactions["invoice_date"].max()
+    minimum_observed = transactions["invoice_date"].min()
+    observation_history_complete = minimum_observed <= feature_start
+    future_label_horizon_complete = label_end <= maximum_observed
     if label_end > maximum_observed:
         raise PointInTimeError(
             f"Cutoff {cutoff_timestamp.date()} has an incomplete {horizon_days}-day horizon; "
@@ -73,7 +82,20 @@ def build_snapshot(
     features["label_window_start"] = label_start
     features["label_window_end"] = label_end
     features["split"] = split
-    return features
+    eligible, eligibility_summary = apply_customer_eligibility(
+        features,
+        max_recency_days=max_recency_days,
+        minimum_invoices=minimum_invoices,
+        observation_history_complete=observation_history_complete,
+        future_label_horizon_complete=future_label_horizon_complete,
+    )
+    eligibility_summary.update({"split": split, "cutoff_date": cutoff_timestamp.date().isoformat()})
+    if eligible.empty:
+        raise PointInTimeError(
+            f"No eligible active repeat customers at cutoff {cutoff_timestamp.date()}"
+        )
+    eligible.attrs["eligibility_summary"] = eligibility_summary
+    return eligible
 
 
 def build_snapshots(
@@ -81,19 +103,33 @@ def build_snapshots(
     split_cutoffs: Mapping[str, Sequence[str]],
     history_days: int,
     horizon_days: int,
+    max_recency_days: int = 81,
+    minimum_invoices: int = 2,
 ) -> pd.DataFrame:
     """Build all configured temporal splits in deterministic order."""
     snapshots = []
+    eligibility_summaries = []
     for split in SPLIT_ORDER:
         for cutoff in split_cutoffs.get(split, []):
-            snapshots.append(
-                build_snapshot(transactions, cutoff, split, history_days, horizon_days)
+            snapshot = build_snapshot(
+                transactions,
+                cutoff,
+                split,
+                history_days,
+                horizon_days,
+                max_recency_days,
+                minimum_invoices,
             )
+            eligibility_summaries.append(snapshot.attrs["eligibility_summary"])
+            snapshots.append(snapshot)
     if not snapshots:
         raise PointInTimeError("No snapshot cutoffs were configured")
     result = pd.concat(snapshots, ignore_index=True)
     assert_point_in_time_integrity(result, transactions, history_days)
-    return result.sort_values(["cutoff_date", "customer_id"]).reset_index(drop=True)
+    assert_eligibility_integrity(result, max_recency_days, minimum_invoices)
+    result = result.sort_values(["cutoff_date", "customer_id"]).reset_index(drop=True)
+    result.attrs["eligibility_summary"] = eligibility_summaries
+    return result
 
 
 def assert_point_in_time_integrity(

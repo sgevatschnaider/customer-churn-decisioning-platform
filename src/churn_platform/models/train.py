@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-import subprocess
+import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,7 +24,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from churn_platform.config import PROJECT_ROOT, project_path
+from churn_platform.config import project_path
 from churn_platform.features.build_features import (
     CATEGORICAL_FEATURES,
     MODEL_FEATURES,
@@ -32,6 +32,7 @@ from churn_platform.features.build_features import (
 )
 from churn_platform.models.calibrate import ProbabilityCalibrator
 from churn_platform.models.evaluate import evaluate_predictions, generate_evaluation_plots
+from churn_platform.reproducibility import source_commit
 
 LOGGER = logging.getLogger(__name__)
 
@@ -48,6 +49,8 @@ class ModelBundle:
     training_period: dict[str, str]
     test_metrics: dict[str, Any]
     validation_comparison: list[dict[str, Any]]
+    tracking_uri: str
+    run_metadata: dict[str, Any]
 
 
 def _preprocessor(scale: bool) -> ColumnTransformer:
@@ -127,18 +130,15 @@ def _heuristic_probability(features: pd.DataFrame) -> np.ndarray:
 
 
 def code_version() -> str:
-    """Return the Git commit SHA when available, otherwise an explicit local marker."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return "uncommitted-local-run"
+    """Return the exact public source commit selected for this execution."""
+    return source_commit()
+
+
+def resolve_tracking_uri(explicit_tracking_uri: str | None = None) -> str:
+    """Resolve explicit, runtime-environment, then local MLflow tracking in that order."""
+    return (
+        explicit_tracking_uri or os.getenv("MLFLOW_TRACKING_URI") or project_path("mlruns").as_uri()
+    )
 
 
 def train_and_select(
@@ -148,6 +148,7 @@ def train_and_select(
     figures_directory: str | Path = "reports/figures",
     tracking_uri: str | None = None,
     decisioning_config: dict[str, Any] | None = None,
+    run_metadata: dict[str, Any] | None = None,
 ) -> tuple[ModelBundle, pd.DataFrame]:
     """Select on validation, calibrate on validation, and evaluate test exactly once."""
     required_splits = {"train", "validation", "test"}
@@ -202,6 +203,11 @@ def train_and_select(
         y_test, test_probability, project_path(figures_directory), feature_importance
     )
 
+    resolved_tracking_uri = resolve_tracking_uri(tracking_uri)
+    metadata = dict(run_metadata or {})
+    metadata.setdefault("source_commit", code_version())
+    metadata.setdefault("execution_timestamp_utc", datetime.now(UTC).isoformat())
+    metadata["mlflow_tracking_uri"] = resolved_tracking_uri
     bundle = ModelBundle(
         estimator=calibrated,
         model_name=str(winner["model"]),
@@ -216,6 +222,8 @@ def train_and_select(
         },
         test_metrics=test_metrics,
         validation_comparison=comparison,
+        tracking_uri=resolved_tracking_uri,
+        run_metadata=metadata,
     )
     destination = project_path(model_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -230,7 +238,7 @@ def train_and_select(
         encoding="utf-8",
     )
 
-    mlflow.set_tracking_uri(tracking_uri or project_path("mlruns").as_uri())
+    mlflow.set_tracking_uri(resolved_tracking_uri)
     mlflow.set_experiment("customer-churn-decisioning")
     with mlflow.start_run(run_name=f"{bundle.model_name}-temporal-test") as run:
         mlflow.log_params(
@@ -242,6 +250,11 @@ def train_and_select(
                 "validation_cutoff": bundle.training_period["validation_cutoff"],
                 "test_cutoff": bundle.training_period["test_cutoff"],
                 "code_version": bundle.model_version,
+                "tracking_uri": resolved_tracking_uri,
+                "python_version": metadata.get("python_version", "not-recorded"),
+                "dependency_lock_identifier": metadata.get(
+                    "dependency_lock_identifier", "not-recorded"
+                ),
             }
         )
         mlflow.log_metrics(
@@ -249,6 +262,7 @@ def train_and_select(
         )
         if decisioning_config:
             mlflow.log_dict(decisioning_config, "configuration/decisioning.json")
+        mlflow.log_dict(metadata, "lineage/run_metadata.json")
         mlflow.log_dict(model_config, "configuration/model.json")
         mlflow.log_dict({"features": MODEL_FEATURES}, "model/features.json")
         mlflow.log_artifact(str(metrics_path), artifact_path="evaluation")
@@ -269,7 +283,13 @@ def train_and_select(
         )
         (destination.parent / "mlflow_run.json").write_text(
             json.dumps(
-                {"run_id": run.info.run_id, "experiment_id": run.info.experiment_id}, indent=2
+                {
+                    "run_id": run.info.run_id,
+                    "experiment_id": run.info.experiment_id,
+                    "tracking_uri": resolved_tracking_uri,
+                    **metadata,
+                },
+                indent=2,
             ),
             encoding="utf-8",
         )
