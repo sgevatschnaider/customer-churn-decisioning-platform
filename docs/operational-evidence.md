@@ -15,7 +15,7 @@ container acceptance record; this document does not presume that result before C
 |---|---|
 | Python 3.12 lock installation | Available |
 | Ruff lint and format | Executed |
-| Unit/integration tests and branch coverage | Executed |
+| Unit/integration tests and branch coverage | 26 passed; 90.67% combined line/branch coverage |
 | Isolated synthetic fixture pipeline | Executed |
 | FastAPI ready/degraded behavior | Executed through `TestClient` |
 | Local MLflow file-store run | Executed by the fixture integration test |

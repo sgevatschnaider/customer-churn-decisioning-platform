@@ -354,7 +354,7 @@ make test
 make ci
 ```
 
-The verified suite contains **26 tests** and achieved **90.4% combined line/branch coverage**, above
+The verified suite contains **26 tests** and achieved **90.7% combined line/branch coverage**, above
 the 80% gate. It covers eligibility, leakage,
 horizon alignment, economic assumptions, every campaign constraint, MLflow runtime/public metadata
 separation, readiness/degraded states, portfolio API behavior, monitoring, tracked-file privacy, and
